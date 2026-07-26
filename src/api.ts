@@ -1,4 +1,4 @@
-const BASE_URL = 'http://localhost:4001/api';
+const BASE_URL = import.meta.env.VITE_API_URL || 'https://api.wsyelhi.com/api';
 
 export function getToken() {
   return localStorage.getItem('admin_token');
@@ -131,15 +131,27 @@ export const api = {
     });
   },
 
-  async getSyllabusWeeks(gradeSubjectId: string) {
-    return request(`/syllabus-weeks?gradeSubjectId=${gradeSubjectId}`);
+  async getSyllabusWeeks(gradeSubjectId: string, region?: string) {
+    const qRegion = region ? `&region=${region}` : '';
+    return request(`/syllabus-weeks?gradeSubjectId=${gradeSubjectId}${qRegion}`);
+  },
+
+  async getCalendarDays(startDate: string, endDate: string, region: string) {
+    return request(`/calendar-days?startDate=${startDate}&endDate=${endDate}&region=${region}`);
+  },
+
+  async saveCalendarDay(payload: { date: string; dayName: string; type: string; region: string; note?: string }) {
+    return request('/calendar-days', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
   },
 
   async createSyllabusWeek(
     gradeSubjectId: string,
     weekNumber: number,
     title: string,
-    options?: { startDateHijri?: string; endDateHijri?: string; weekType?: string }
+    options?: { startDateHijri?: string; endDateHijri?: string; weekType?: string; region?: string; days?: any }
   ) {
     return request('/syllabus-weeks', {
       method: 'POST',
@@ -150,6 +162,8 @@ export const api = {
         startDateHijri: options?.startDateHijri || null,
         endDateHijri: options?.endDateHijri || null,
         weekType: options?.weekType || 'LESSON',
+        region: options?.region || 'GENERAL',
+        days: options?.days || null,
       }),
     });
   },

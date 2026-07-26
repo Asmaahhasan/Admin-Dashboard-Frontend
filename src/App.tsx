@@ -4,7 +4,7 @@ import html2canvas from 'html2canvas';
 import { api, getToken, removeToken } from './api';
 import {
   LogOut, Plus, Trash2, Upload, Link as LinkIcon,
-  FileText, Gamepad2, Tv, Save, BookOpen,
+  FileText, Gamepad2, Tv, Save,
   CheckCircle, X, AlertCircle, CalendarDays, Layers,
   Settings, Pencil, Sun, Moon, ChevronRight,
   GraduationCap, BookMarked, Library, Image, Printer, Download
@@ -19,7 +19,7 @@ interface Semester { id: string; name: string; order: number; gradeId: string; }
 interface SubjectOption { gradeSubjectId: string; subjectId: string; name: string; }
 interface LessonActivityItem { id?: string; type: string; title: string; url?: string; filePath?: string; thumbnailUrl?: string; }
 interface LessonActivity { id: string; gradeSubjectId: string; syllabusWeekId?: string | null; lessonTitle: string; items: LessonActivityItem[]; }
-interface SyllabusWeek { id: string; gradeSubjectId: string; weekNumber: number; title: string; startDateHijri?: string | null; endDateHijri?: string | null; weekType?: string | null; activity?: LessonActivity | null; }
+interface SyllabusWeek { id: string; gradeSubjectId: string; weekNumber: number; title: string; startDateHijri?: string | null; endDateHijri?: string | null; weekType?: string | null; activity?: LessonActivity | null; weekDays?: any[] | null; }
 
 type Page = 'syllabus' | 'activities' | 'curriculum';
 type Theme = 'dark' | 'light';
@@ -534,11 +534,23 @@ function SyllabusPage({ f, notify }: { f: FilterState; notify: (t: 'success' | '
   const [weeks, setWeeks] = useState<SyllabusWeek[]>([]);
   const [loading, setLoading] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
+  const [editingWeekId, setEditingWeekId] = useState<string | null>(null);
   const [showPdfModal, setShowPdfModal] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [weekNum, setWeekNum] = useState(1);
   const [weekTitle, setWeekTitle] = useState('');
   const [weekType, setWeekType] = useState<'LESSON' | 'HOLIDAY' | 'EXAM'>('LESSON');
+  const [selectedRegion, setSelectedRegion] = useState<'GENERAL' | 'WESTERN'>('GENERAL');
+  const [pdfSchoolName, setPdfSchoolName] = useState('');
+  const [pdfTeacherName, setPdfTeacherName] = useState('');
+  const [pdfPrincipalName, setPdfPrincipalName] = useState('');
+  const [daysList, setDaysList] = useState<Array<{ day: string; type: 'LESSON' | 'HOLIDAY'; lessonTitle: string; fromCalendar?: boolean }>>([
+    { day: 'الأحد', type: 'LESSON', lessonTitle: '', fromCalendar: false },
+    { day: 'الاثنين', type: 'LESSON', lessonTitle: '', fromCalendar: false },
+    { day: 'الثلاثاء', type: 'LESSON', lessonTitle: '', fromCalendar: false },
+    { day: 'الأربعاء', type: 'LESSON', lessonTitle: '', fromCalendar: false },
+    { day: 'الخميس', type: 'LESSON', lessonTitle: '', fromCalendar: false }
+  ]);
   const [startDatePicker, setStartDatePicker] = useState('');
   const [endDatePicker, setEndDatePicker] = useState('');
   const [hijriFrom, setHijriFrom] = useState('');
@@ -556,16 +568,16 @@ function SyllabusPage({ f, notify }: { f: FilterState; notify: (t: 'success' | '
       const year = dt.getFullYear(), month = dt.getMonth() + 1, day = dt.getDate();
       const T = Math.trunc;
       const jd = T((1461 * (year + 4800 + T((month - 14) / 12))) / 4)
-               + T((367 * (month - 2 - 12 * T((month - 14) / 12))) / 12)
-               - T((3 * T((year + 4900 + T((month - 14) / 12)) / 100)) / 4)
-               + day - 32075;
-      const l  = jd - 1948440 + 10632;
-      const n  = T((l - 1) / 10631);
+        + T((367 * (month - 2 - 12 * T((month - 14) / 12))) / 12)
+        - T((3 * T((year + 4900 + T((month - 14) / 12)) / 100)) / 4)
+        + day - 32075;
+      const l = jd - 1948440 + 10632;
+      const n = T((l - 1) / 10631);
       const l2 = l - 10631 * n + 354;
-      const j  = T((10985 - l2) / 5316) * T((50 * l2) / 17719)
-               + T(l2 / 5670) * T((43 * l2) / 15238);
+      const j = T((10985 - l2) / 5316) * T((50 * l2) / 17719)
+        + T(l2 / 5670) * T((43 * l2) / 15238);
       const l3 = l2 - T((30 - j) / 15) * T((17719 * j) / 50)
-               - T(j / 16) * T((15238 * j) / 43) + 29;
+        - T(j / 16) * T((15238 * j) / 43) + 29;
       const hm = T((24 * l3) / 709);
       const hd = l3 - T((709 * hm) / 24);
       const hy = 30 * n + j - 30;
@@ -573,81 +585,98 @@ function SyllabusPage({ f, notify }: { f: FilterState; notify: (t: 'success' | '
     } catch { return null; }
   };
 
-  const getHijriDateStr = (isoDate: string) => {
-    const h = gregToHijri(isoDate);
-    if (!h) return '';
-    return `${h.d}-${h.m}-${h.y} هـ`;
-  };
 
-  const getGregDateStr = (dateStr: string) => {
-    if (!dateStr) return '';
-    try {
-      const d = new Date(dateStr + 'T12:00:00');
-      return `${d.getDate()}-${d.getMonth() + 1}-${d.getFullYear()} م`;
-    } catch { return ''; }
-  };
 
   // Compute a complete { hijriStr, gregStr } from two ISO date strings
   const computeDateStrings = (startIso: string, endIso: string) => {
     const hS = gregToHijri(startIso);
     const hE = gregToHijri(endIso);
     const dS = startIso ? new Date(startIso + 'T12:00:00') : null;
-    const dE = endIso   ? new Date(endIso   + 'T12:00:00') : null;
+    const dE = endIso ? new Date(endIso + 'T12:00:00') : null;
     const hFrom = hS ? `${hS.d}-${hS.m}` : '';
-    const hTo   = hE ? `${hE.d}-${hE.m}-${hE.y} هـ` : '';
+    const hTo = hE ? `${hE.d}-${hE.m}-${hE.y} هـ` : '';
     const gFrom = dS ? `${dS.getDate()}-${dS.getMonth() + 1}` : '';
-    const gTo   = dE ? `${dE.getDate()}-${dE.getMonth() + 1}-${dE.getFullYear()} م` : '';
+    const gTo = dE ? `${dE.getDate()}-${dE.getMonth() + 1}-${dE.getFullYear()} م` : '';
     return {
       hijriStr: hFrom && hTo ? `من ${hFrom} إلى ${hTo}` : '',
-      gregStr:  gFrom && gTo ? `من ${gFrom} إلى ${gTo}` : '',
+      gregStr: gFrom && gTo ? `من ${gFrom} إلى ${gTo}` : '',
     };
   };
 
-  const handleStartDatePickerChange = (val: string) => {
-    setStartDatePicker(val);
-    startPickerRef.current = val;
-    if (val) {
-      const h = gregToHijri(val);
-      const d = new Date(val + 'T12:00:00');
-      setHijriFrom(h ? `${h.d}-${h.m}` : '');
-      setGregFrom(`${d.getDate()}-${d.getMonth() + 1}`);
+  const fetchAndPopulateCalendarDays = async (start: string, end: string, region: string) => {
+    if (!start || !end) return;
+    try {
+      const calDays = await api.getCalendarDays(start, end, region);
+
+      const newDaysList: Array<{ day: string; type: 'LESSON' | 'HOLIDAY'; lessonTitle: string; fromCalendar: boolean }> = [
+        { day: 'الأحد', type: 'LESSON', lessonTitle: '', fromCalendar: false },
+        { day: 'الاثنين', type: 'LESSON', lessonTitle: '', fromCalendar: false },
+        { day: 'الثلاثاء', type: 'LESSON', lessonTitle: '', fromCalendar: false },
+        { day: 'الأربعاء', type: 'LESSON', lessonTitle: '', fromCalendar: false },
+        { day: 'الخميس', type: 'LESSON', lessonTitle: '', fromCalendar: false }
+      ];
+
+      calDays.forEach((cd: any) => {
+        const dObj = new Date(cd.date);
+        const dayIdx = dObj.getDay(); // 0 is Sunday
+        if (dayIdx >= 0 && dayIdx <= 4) {
+          newDaysList[dayIdx].type = cd.type === 'HOLIDAY' ? 'HOLIDAY' : 'LESSON';
+          newDaysList[dayIdx].fromCalendar = true;
+          if (cd.type === 'HOLIDAY') {
+            newDaysList[dayIdx].lessonTitle = cd.note || 'إجازة رسمية';
+          }
+        }
+      });
+
+      setDaysList(newDaysList);
+    } catch (e) {
+      console.error('Failed to auto-populate calendar days:', e);
     }
   };
 
-  const handleEndDatePickerChange = (val: string) => {
-    setEndDatePicker(val);
-    endPickerRef.current = val;
-    if (val) {
-      const h = gregToHijri(val);
-      const d = new Date(val + 'T12:00:00');
-      setHijriTo(h ? `${h.d}-${h.m}-${h.y} هـ` : '');
-      setGregTo(`${d.getDate()}-${d.getMonth() + 1}-${d.getFullYear()} م`);
+  // Re-fetch calendar days when region tab changes while a week is already chosen
+  useEffect(() => {
+    if (startDatePicker && endDatePicker) {
+      fetchAndPopulateCalendarDays(startDatePicker, endDatePicker, selectedRegion);
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedRegion]);
 
   useEffect(() => {
     if (f.gradeSubjectId) { setLoading(true); loadWeeks(); }
     else setWeeks([]);
-  }, [f.gradeSubjectId]);
+  }, [f.gradeSubjectId, selectedRegion]);
 
   const loadWeeks = async () => {
     try {
-      const data = await api.getSyllabusWeeks(f.gradeSubjectId);
-      setWeeks(data);
-      if (data.length > 0) setWeekNum(data[data.length - 1].weekNumber + 1);
-    } catch { notify('error', 'فشل تحميل الأسابيع.'); }
-    finally { setLoading(false); }
+      const data = await api.getSyllabusWeeks(f.gradeSubjectId, selectedRegion);
+      const safeData = Array.isArray(data) ? data : [];
+      setWeeks(safeData);
+      if (safeData.length > 0) {
+        setWeekNum(safeData[safeData.length - 1].weekNumber + 1);
+      } else {
+        setWeekNum(1);
+      }
+    } catch (err) {
+      // Quietly fall back to empty array for region without showing a failure toast
+      setWeeks([]);
+      setWeekNum(1);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleOpenAddModal = () => {
+    setEditingWeekId(null);
     setShowAdd(true);
+    setWeekTitle('');
+    setWeekType('LESSON');
     let startDate = new Date();
-    
+
     // Auto-advance date from last week if available
     if (weeks.length > 0) {
       const lastW = weeks[weeks.length - 1];
       if (lastW.endDateHijri) {
-        // extract greg date if available or advance by 7 days
         startDate.setDate(startDate.getDate() + 7);
       }
     }
@@ -658,7 +687,7 @@ function SyllabusPage({ f, notify }: { f: FilterState; notify: (t: 'success' | '
     const endIso = endDate.toISOString().split('T')[0];
 
     startPickerRef.current = startIso;
-    endPickerRef.current   = endIso;
+    endPickerRef.current = endIso;
 
     setStartDatePicker(startIso);
     setEndDatePicker(endIso);
@@ -672,6 +701,32 @@ function SyllabusPage({ f, notify }: { f: FilterState; notify: (t: 'success' | '
     setGregTo(`${dE.getDate()}-${dE.getMonth() + 1}-${dE.getFullYear()} م`);
   };
 
+  const handleOpenEditModal = (w: SyllabusWeek) => {
+    setEditingWeekId(w.id);
+    setWeekNum(w.weekNumber);
+    setWeekTitle(w.title || '');
+    setWeekType((w.weekType as any) || 'LESSON');
+
+    // Parse dates from string
+    if (w.startDateHijri) {
+      const parts = w.startDateHijri.replace(/^من\s*/i, '').split(' إلى ');
+      setHijriFrom(parts[0] || '');
+      setHijriTo(parts[1] || '');
+    } else {
+      setHijriFrom(''); setHijriTo('');
+    }
+
+    if (w.endDateHijri) {
+      const parts = w.endDateHijri.replace(/^من\s*/i, '').split(' إلى ');
+      setGregFrom(parts[0] || '');
+      setGregTo(parts[1] || '');
+    } else {
+      setGregFrom(''); setGregTo('');
+    }
+
+    setShowAdd(true);
+  };
+
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -681,28 +736,46 @@ function SyllabusPage({ f, notify }: { f: FilterState; notify: (t: 'success' | '
       );
 
       let finalHijri = hijriStr;
-      let finalGreg  = gregStr;
+      let finalGreg = gregStr;
       const hf = hijriFrom.trim(), ht = hijriTo.trim();
-      const gf = gregFrom.trim(),  gt = gregTo.trim();
+      const gf = gregFrom.trim(), gt = gregTo.trim();
       if (hf && ht) finalHijri = `من ${hf} إلى ${ht}`;
-      if (gf && gt) finalGreg  = `من ${gf} إلى ${gt}`;
+      if (gf && gt) finalGreg = `من ${gf} إلى ${gt}`;
 
       if (!finalHijri) finalHijri = 'من -- إلى --';
-      if (!finalGreg)  finalGreg  = 'من -- إلى --';
+      if (!finalGreg) finalGreg = 'من -- إلى --';
 
-      const createdWeek = await api.createSyllabusWeek(f.gradeSubjectId, weekNum, weekTitle, {
+      // Auto-join day titles for the week title if title is empty
+      let finalTitle = weekTitle.trim();
+      if (!finalTitle && weekType === 'LESSON') {
+        finalTitle = daysList
+          .map(d => `${d.day}: ${d.type === 'HOLIDAY' ? 'إجازة' : (d.lessonTitle || 'بلا درس')}`)
+          .join(' | ');
+      }
+
+      const createdWeek = await api.createSyllabusWeek(f.gradeSubjectId, weekNum, finalTitle || 'أسبوع دراسي', {
         startDateHijri: finalHijri,
-        endDateHijri:   finalGreg,
+        endDateHijri: finalGreg,
         weekType,
+        region: selectedRegion,
+        days: daysList,
       });
 
-      notify('success', 'تمت الإضافة بنجاح.');
+      notify('success', editingWeekId ? 'تم التعديل بنجاح.' : 'تمت الإضافة بنجاح.');
       setShowAdd(false);
+      setEditingWeekId(null);
       setWeekTitle('');
       startPickerRef.current = ''; endPickerRef.current = '';
       setStartDatePicker(''); setEndDatePicker('');
       setHijriFrom(''); setHijriTo(''); setGregFrom(''); setGregTo('');
       setWeekType('LESSON');
+      setDaysList([
+        { day: 'الأحد', type: 'LESSON', lessonTitle: '' },
+        { day: 'الاثنين', type: 'LESSON', lessonTitle: '' },
+        { day: 'الثلاثاء', type: 'LESSON', lessonTitle: '' },
+        { day: 'الأربعاء', type: 'LESSON', lessonTitle: '' },
+        { day: 'الخميس', type: 'LESSON', lessonTitle: '' }
+      ]);
 
       // Update state directly with returned createdWeek object (Instant UI update!)
       setWeeks(prev => {
@@ -719,7 +792,6 @@ function SyllabusPage({ f, notify }: { f: FilterState; notify: (t: 'success' | '
     catch { notify('error', 'فشل الحذف.'); }
   };
 
-  const selStage = f.stages.find(s => s.id === f.stageId);
   const selGrade = f.grades.find(g => g.id === f.gradeId);
   const selSemester = f.semesters.find(s => s.id === f.semesterId);
   const selSubject = f.subjects.find(s => s.gradeSubjectId === f.gradeSubjectId || s.subjectId === f.subjectId);
@@ -770,41 +842,33 @@ function SyllabusPage({ f, notify }: { f: FilterState; notify: (t: 'success' | '
         imageTimeout: 0,
       });
 
-      // Build multi-page A4 landscape PDF
+      // Build Single-Page A4 landscape PDF with auto-scale
       const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
       const pageW = pdf.internal.pageSize.getWidth();  // 297mm
       const pageH = pdf.internal.pageSize.getHeight(); // 210mm
-      const margin = 7;
-      const printW = pageW - margin * 2;
-      const pxPerMm = canvas.width / printW;
-      const pageHeightPx = (pageH - margin * 2) * pxPerMm;
+      const margin = 5;
+      const printW = pageW - margin * 2; // 287mm
+      const printH = pageH - margin * 2; // 200mm
 
-      let yOffset = 0;
-      let pageNum = 0;
+      const imgWidthMm = printW;
+      const imgHeightMm = (canvas.height * printW) / canvas.width;
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
 
-      while (yOffset < canvas.height) {
-        if (pageNum > 0) pdf.addPage();
-
-        const sliceH = Math.min(pageHeightPx, canvas.height - yOffset);
-        const sliceCanvas = document.createElement('canvas');
-        sliceCanvas.width = canvas.width;
-        sliceCanvas.height = Math.ceil(sliceH);
-        const ctx = sliceCanvas.getContext('2d')!;
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
-        ctx.drawImage(canvas, 0, yOffset, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
-
-        // Use JPEG for smaller size & better browser support
-        const sliceImg = sliceCanvas.toDataURL('image/jpeg', 0.93);
-        pdf.addImage(sliceImg, 'JPEG', margin, margin, printW, sliceH / pxPerMm);
-
-        yOffset += pageHeightPx;
-        pageNum++;
+      if (imgHeightMm <= printH) {
+        // Fits within 1 page
+        const yOffset = margin + (printH - imgHeightMm) / 2; // Center vertically
+        pdf.addImage(imgData, 'JPEG', margin, Math.max(margin, yOffset), imgWidthMm, imgHeightMm);
+      } else {
+        // Scale down proportionally so the ENTIRE document fits 100% on 1 single page!
+        const fitScale = printH / imgHeightMm;
+        const finalW = imgWidthMm * fitScale;
+        const finalH = printH;
+        const xOffset = margin + (printW - finalW) / 2; // Center horizontally
+        pdf.addImage(imgData, 'JPEG', xOffset, margin, finalW, finalH);
       }
 
-      // ASCII-safe filename to avoid Windows encoding issues
       pdf.save('syllabus-distribution.pdf');
-      notify('success', 'تم تحميل الـ PDF بنجاح ✓');
+      notify('success', 'تم تحميل الـ PDF بنجاح (صفحة واحدة مكتملة) ✓');
     } catch (err: any) {
       console.error('PDF Error:', err);
       notify('error', 'فشل إنشاء PDF — تفاصيل: ' + String(err?.message || err));
@@ -855,6 +919,33 @@ function SyllabusPage({ f, notify }: { f: FilterState; notify: (t: 'success' | '
         </div>
       </div>
 
+      {/* Region Selector Tab Row */}
+      {f.gradeSubjectId && (
+        <div style={{ marginBottom: 20, display: 'flex', gap: 8, background: 'var(--bg2)', padding: 6, borderRadius: 10, width: 'fit-content', flexWrap: 'wrap' }}>
+          {([['GENERAL', '🌍 التوزيع العام'], ['WESTERN', '📍 مكة المكرمة - جدة - الطائف']] as const).map(([rCode, rName]) => (
+            <button
+              key={rCode}
+              type="button"
+              onClick={() => setSelectedRegion(rCode)}
+              style={{
+                padding: '8px 18px',
+                borderRadius: 8,
+                border: 'none',
+                background: selectedRegion === rCode ? 'linear-gradient(135deg, #0d9488, #0f766e)' : 'transparent',
+                color: selectedRegion === rCode ? '#fff' : 'var(--text-2)',
+                fontFamily: 'Cairo',
+                fontWeight: 700,
+                fontSize: 13,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+            >
+              {rName}
+            </button>
+          ))}
+        </div>
+      )}
+
       {!f.gradeSubjectId ? (
         <div className="empty-state glass">
           <CalendarDays size={56} className="empty-icon" />
@@ -878,16 +969,27 @@ function SyllabusPage({ f, notify }: { f: FilterState; notify: (t: 'success' | '
             if (isHoliday) cardClass += ' is-holiday';
             else if (isExam) cardClass += ' is-exam';
 
-            const parts = w.title.split('|').map(p => p.trim());
+            // Find holiday title from weekDays or title
+            const holidayDay = Array.isArray(w.weekDays) ? (w.weekDays as any[]).find(d => d.type === 'HOLIDAY' && d.lessonTitle) : null;
+            const holidayTitle = holidayDay ? holidayDay.lessonTitle : (w.title.includes('إجازة') ? w.title : '');
+
+            // Split topics by slash, pipe or newline
+            const topics = w.title
+              .split(/[\/|\n]+/)
+              .map(p => p.trim())
+              .filter(Boolean);
 
             return (
               <div key={w.id} className={cardClass}>
                 <div className="wc-header">
                   <div className="wc-header-title">
-                    {isHoliday ? '🌴 إجازة' : isExam ? '📝 اختبارات' : getArabicOrdinalWeek(w.weekNumber)}
+                    {isHoliday ? 'إجازة' : isExam ? 'اختبارات' : getArabicOrdinalWeek(w.weekNumber)}
                   </div>
-                  <div className="wc-header-actions">
+                  <div className="wc-header-actions" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     {w.activity && <span className="wc-badge-success">✓ نشاط</span>}
+                    <button className="wc-edit-btn" title="تعديل الأسبوع" onClick={(e) => { e.stopPropagation(); handleOpenEditModal(w); }} style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', padding: '4px 6px', borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                      <Pencil size={14} />
+                    </button>
                     <button className="wc-delete-btn" title="حذف الأسبوع" onClick={(e) => { e.stopPropagation(); handleDelete(w.id); }}>
                       <Trash2 size={14} />
                     </button>
@@ -896,25 +998,33 @@ function SyllabusPage({ f, notify }: { f: FilterState; notify: (t: 'success' | '
 
                 <div className="wc-body">
                   {(w.startDateHijri || w.endDateHijri) && (
-                    <div className="wc-dates-box">
+                    <div className="wc-dates-box" style={{ borderRadius: 8, border: '1px dashed #0284c7', background: '#f0f9ff', padding: '6px 10px', textAlign: 'center', fontSize: 12, fontWeight: 700, color: '#0369a1', marginBottom: 10 }}>
                       {w.startDateHijri && <div>{w.startDateHijri}</div>}
                       {w.endDateHijri && <div>{w.endDateHijri}</div>}
                     </div>
                   )}
 
-                  <div className="wc-title-content">
-                    {parts.map((part, pIdx) => {
-                      const isNational = part.includes('اليوم الوطني');
+                  {holidayTitle && (
+                    <div style={{ background: '#fef2f2', border: '1.5px solid #fca5a5', borderRadius: 10, padding: '8px 12px', color: '#991b1b', fontWeight: 700, textAlign: 'center', marginBottom: 12, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                      🌴 📍 {holidayTitle.includes('إجازة') ? holidayTitle : `إجازة ${holidayTitle}`}
+                    </div>
+                  )}
+
+                  <div className="wc-title-content" style={{ display: 'flex', flexDirection: 'column', gap: 6, textAlign: 'center', marginTop: 6 }}>
+                    {topics.length > 0 ? topics.map((topic, tIdx) => {
+                      const isNational = topic.includes('اليوم الوطني');
                       return (
-                        <div key={pIdx} className={`wc-title-part ${isNational ? 'is-national' : ''}`}>
-                          {isNational ? '📍 ' : ''}{part}
+                        <div key={tIdx} style={{ fontSize: 13, fontWeight: 600, color: isNational ? '#b91c1c' : 'var(--text)', padding: '2px 0' }}>
+                          {isNational ? '📍 ' : ''}{topic}
                         </div>
                       );
-                    })}
+                    }) : (
+                      <div style={{ fontSize: 13, color: 'var(--text-3)', fontStyle: 'italic' }}>لا يوجد عنوان للأسبوع</div>
+                    )}
                   </div>
 
                   {w.activity && (
-                    <div className="wc-activity-tag">
+                    <div className="wc-activity-tag" style={{ marginTop: 12 }}>
                       <Layers size={13} /> {w.activity.items?.length || 0} عنصر تفاعلي مرتبطة
                     </div>
                   )}
@@ -925,75 +1035,153 @@ function SyllabusPage({ f, notify }: { f: FilterState; notify: (t: 'success' | '
         </div>
       )}
 
+      {/* Bottom PDF Export Action Bar */}
+      {f.gradeSubjectId && weeks.length > 0 && (
+        <div style={{
+          marginTop: 28,
+          marginBottom: 10,
+          padding: '16px 24px',
+          background: 'var(--surface)',
+          border: '1.5px solid var(--border)',
+          borderRadius: 16,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
+          flexWrap: 'wrap',
+          gap: 16
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ background: 'rgba(13, 148, 136, 0.12)', padding: 12, borderRadius: 12, color: 'var(--primary)' }}>
+              <FileText size={22} />
+            </div>
+            <div>
+              <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>تصدير خطة توزيع المنهج (PDF)</h4>
+              <p style={{ margin: '2px 0 0 0', fontSize: 12, color: 'var(--text-2)' }}>توليد مستند رسمي معتمد جاهز للطباعة والاعتماد</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn-primary"
+            style={{
+              padding: '10px 24px',
+              borderRadius: 12,
+              background: 'linear-gradient(135deg, #0d9488, #0f766e)',
+              boxShadow: '0 4px 14px rgba(13, 148, 136, 0.35)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              fontSize: 14,
+              fontWeight: 700,
+              cursor: 'pointer'
+            }}
+            onClick={() => setShowPdfModal(true)}
+          >
+            <FileText size={18} /> تصدير PDF للمنهج
+          </button>
+        </div>
+      )}
+
       {showAdd && (
         <div className="overlay">
-          <div className="modal glass" style={{ maxWidth: 500 }}>
+          <div className="modal glass" style={{ maxWidth: weekType === 'LESSON' ? 880 : 500, width: '92%' }}>
             <div className="modal-head">
               <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <CalendarDays size={18} /> إضافة أسبوع دراسي
+                <CalendarDays size={18} /> {editingWeekId ? 'تعديل أسبوع دراسي' : 'إضافة أسبوع دراسي'}
               </h3>
               <button className="icon-btn" onClick={() => setShowAdd(false)}><X size={20} /></button>
             </div>
-            <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '4px 0' }}>
+            <form onSubmit={handleAdd} style={{ display: 'grid', gridTemplateColumns: weekType === 'LESSON' ? '1.1fr 1fr' : '1fr', gap: 16, padding: '4px 0' }}>
 
-              {/* Week Number */}
-              <div className="field">
-                <label>رقم الأسبوع</label>
-                <input type="number" min={1} max={40} value={weekNum}
-                  onChange={e => setWeekNum(Number(e.target.value))} required />
-              </div>
-
-              {/* Week Type */}
-              <div className="field">
-                <label>نوع الأسبوع</label>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  {([['LESSON', '📚 درس عادي', '#6c63ff'], ['HOLIDAY', '🌴 إجازة', '#f97316'], ['EXAM', '📝 اختبارات', '#10b981']] as const).map(([val, label, color]) => (
-                    <button key={val} type="button"
-                      onClick={() => setWeekType(val)}
-                      style={{
-                        flex: 1, padding: '8px 6px', borderRadius: 10, border: `2px solid ${weekType === val ? color : 'var(--border)'}`,
-                        background: weekType === val ? `${color}22` : 'var(--bg2)',
-                        color: weekType === val ? color : 'var(--text-2)',
-                        fontFamily: 'Cairo', fontWeight: 700, fontSize: 12,
-                        cursor: 'pointer', transition: 'all 0.18s',
-                      }}>
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Content / Title */}
-              <div className="field">
-                <label>المحتوى / عنوان الوحدة</label>
-                <textarea
-                  placeholder={weekType === 'HOLIDAY' ? 'مثال: إجازة اليوم الوطني' : weekType === 'EXAM' ? 'مثال: اختبار منتصف الفصل' : 'مثال: مجال الرسم - الألوان الممتعة'}
-                  value={weekTitle}
-                  onChange={e => setWeekTitle(e.target.value)}
-                  required
-                  rows={3}
-                  style={{ resize: 'vertical', minHeight: 64 }}
-                />
-                <span style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 3 }}>للمحتوى المتعدد استخدم | للفصل بينها مثال: مجال الرسم | مراجعة</span>
-              </div>
-
-              {/* Date Selection Section */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, background: 'var(--bg2)', padding: 14, borderRadius: 12, border: '1.5px solid var(--primary-dim)' }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <CalendarDays size={16} /> حدد تواريخ الأسبوع (اختيار من التقويم):
-                </span>
-
-                {/* Interactive Calendar Date Pickers */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              {/* Right Column (Basic Details & Dates) */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {/* Week Number & Type in one row */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 10 }}>
                   <div className="field">
-                    <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>من تاريخ (بداية الأسبوع)</label>
+                    <label style={{ fontSize: 12, fontWeight: 700 }}>رقم الأسبوع</label>
+                    <input type="number" min={1} max={40} value={weekNum}
+                      onChange={e => setWeekNum(Number(e.target.value))} required style={{ padding: '8px 10px', fontSize: 13 }} />
+                  </div>
+
+                  <div className="field">
+                    <label style={{ fontSize: 12, fontWeight: 700 }}>نوع الأسبوع</label>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {([['LESSON', '🟢 دراسة', '#e6f4ea', '#137333', '#a8dab5'], ['HOLIDAY', '🔴 إجازة', '#fce8e6', '#c5221f', '#f5c2c7'], ['EXAM', '📝 اختبار', '#e8f0fe', '#1a73e8', '#aecbfa']] as const).map(([val, label, bg, color, border]) => (
+                        <button key={val} type="button"
+                          onClick={() => setWeekType(val)}
+                          style={{
+                            flex: 1, padding: '7px 4px', borderRadius: 8,
+                            border: `1.5px solid ${weekType === val ? border : 'var(--border)'}`,
+                            background: weekType === val ? bg : 'var(--bg2)',
+                            color: weekType === val ? color : 'var(--text-2)',
+                            fontFamily: 'Cairo', fontWeight: 700, fontSize: 11,
+                            cursor: 'pointer', transition: 'all 0.18s',
+                          }}>
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Content / Title */}
+                <div className="field">
+                  <label style={{ fontSize: 12, fontWeight: 700 }}>الموضوعات والدروس للأسبوع</label>
+                  <textarea
+                    placeholder={weekType === 'HOLIDAY' ? 'مثال: إجازة اليوم الوطني (23 سبتمبر)' : 'ضع كل درس/موضوع في سطر مستقل أو افصل بينهما بـ / \nمثال:\nمجال الرسم - الإنسان والرسم\nمراجعة\nمجال الرسم - مدرستي الجميلة'}
+                    value={weekTitle}
+                    onChange={e => setWeekTitle(e.target.value)}
+                    rows={3}
+                    style={{ resize: 'vertical', minHeight: 64, padding: '8px 10px', fontSize: 13 }}
+                  />
+                </div>
+
+                {/* Date Selection Section */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, background: 'var(--bg2)', padding: 10, borderRadius: 10, border: '1.5px solid var(--primary-dim)' }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <CalendarDays size={14} /> حدد تواريخ الأسبوع:
+                  </span>
+
+                  {/* Interactive Calendar Date Picker */}
+                  <div className="field">
+                    <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text)' }}>اختر تاريخ بداية الأسبوع (الأحد)</label>
                     <input
                       type="date"
                       value={startDatePicker}
-                      onChange={e => handleStartDatePickerChange(e.target.value)}
+                      onChange={e => {
+                        const val = e.target.value;
+                        if (val) {
+                          const dObj = new Date(val);
+                          const day = dObj.getDay(); // 0 is Sunday, 1 is Monday, etc.
+                          let sunDate = new Date(dObj);
+                          if (day !== 0) sunDate.setDate(dObj.getDate() - day);
+                          const startIso = sunDate.toISOString().split('T')[0];
+                          const thuDate = new Date(sunDate);
+                          thuDate.setDate(sunDate.getDate() + 4);
+                          const endIso = thuDate.toISOString().split('T')[0];
+
+                          startPickerRef.current = startIso;
+                          endPickerRef.current = endIso;
+
+                          setStartDatePicker(startIso);
+                          setEndDatePicker(endIso);
+
+                          const hS = gregToHijri(startIso);
+                          const hE = gregToHijri(endIso);
+                          const dS = new Date(startIso + 'T12:00:00');
+                          const dE = new Date(endIso + 'T12:00:00');
+
+                          setHijriFrom(hS ? `${hS.d}-${hS.m}` : '');
+                          setGregFrom(`${dS.getDate()}-${dS.getMonth() + 1}`);
+                          setHijriTo(hE ? `${hE.d}-${hE.m}-${hE.y} هـ` : '');
+                          setGregTo(`${dE.getDate()}-${dE.getMonth() + 1}-${dE.getFullYear()} م`);
+
+                          fetchAndPopulateCalendarDays(startIso, endIso, selectedRegion);
+                        }
+                      }}
                       style={{
-                        padding: '9px 12px',
-                        fontSize: 13,
+                        padding: '6px 10px',
+                        fontSize: 12,
                         borderRadius: 8,
                         border: '1.5px solid var(--primary)',
                         background: 'var(--surface)',
@@ -1001,67 +1189,94 @@ function SyllabusPage({ f, notify }: { f: FilterState; notify: (t: 'success' | '
                         fontFamily: 'Cairo',
                         fontWeight: 600,
                         cursor: 'pointer',
+                        width: '100%'
                       }}
                     />
                   </div>
-                  <div className="field">
-                    <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>إلى تاريخ (نهاية الأسبوع)</label>
-                    <input
-                      type="date"
-                      value={endDatePicker}
-                      onChange={e => handleEndDatePickerChange(e.target.value)}
-                      style={{
-                        padding: '9px 12px',
-                        fontSize: 13,
-                        borderRadius: 8,
-                        border: '1.5px solid var(--primary)',
-                        background: 'var(--surface)',
-                        color: 'var(--text)',
-                        fontFamily: 'Cairo',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
-                    />
-                  </div>
-                </div>
 
-                {/* Calculated Hijri & Gregorian values */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4, paddingTop: 8, borderTop: '1px dashed var(--border)' }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-2)' }}>التواريخ المحسوبة تلقائياً (يمكن التعديل):</span>
-                  
-                  {/* Hijri */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                    <div className="field">
-                      <label style={{ fontSize: 11 }}>من (هجري)</label>
-                      <input type="text" placeholder="مثال: 14-5"
-                        value={hijriFrom} onChange={e => setHijriFrom(e.target.value)} />
-                    </div>
-                    <div className="field">
-                      <label style={{ fontSize: 11 }}>إلى (هجري)</label>
-                      <input type="text" placeholder="مثال: 18-5-1448 هـ"
-                        value={hijriTo} onChange={e => setHijriTo(e.target.value)} />
-                    </div>
-                  </div>
+                  {/* Calculated Hijri & Gregorian values */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 2, paddingTop: 6, borderTop: '1px dashed var(--border)' }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-2)' }}>التواريخ المحسوبة (يمكن التعديل):</span>
 
-                  {/* Gregorian */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                    <div className="field">
-                      <label style={{ fontSize: 11 }}>من (عام / ميلادي)</label>
-                      <input type="text" placeholder="مثال: 25-10"
-                        value={gregFrom} onChange={e => setGregFrom(e.target.value)} />
+                    {/* Hijri */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                      <div className="field">
+                        <label style={{ fontSize: 10 }}>من (هجري)</label>
+                        <input type="text" placeholder="مثال: 15-2"
+                          value={hijriFrom} onChange={e => setHijriFrom(e.target.value)} style={{ padding: '6px 8px', fontSize: 11 }} />
+                      </div>
+                      <div className="field">
+                        <label style={{ fontSize: 10 }}>إلى (هجري)</label>
+                        <input type="text" placeholder="مثال: 19-2"
+                          value={hijriTo} onChange={e => setHijriTo(e.target.value)} style={{ padding: '6px 8px', fontSize: 11 }} />
+                      </div>
                     </div>
-                    <div className="field">
-                      <label style={{ fontSize: 11 }}>إلى (عام / ميلادي)</label>
-                      <input type="text" placeholder="مثال: 29-10-2026 م"
-                        value={gregTo} onChange={e => setGregTo(e.target.value)} />
+
+                    {/* Gregorian */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                      <div className="field">
+                        <label style={{ fontSize: 10 }}>من (ميلادي)</label>
+                        <input type="text" placeholder="مثال: 31-7"
+                          value={gregFrom} onChange={e => setGregFrom(e.target.value)} style={{ padding: '6px 8px', fontSize: 11 }} />
+                      </div>
+                      <div className="field">
+                        <label style={{ fontSize: 10 }}>إلى (ميلادي)</label>
+                        <input type="text" placeholder="مثال: 4-8-2026 م"
+                          value={gregTo} onChange={e => setGregTo(e.target.value)} style={{ padding: '6px 8px', fontSize: 11 }} />
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="modal-foot">
-                <button type="button" className="btn-ghost" onClick={() => setShowAdd(false)}>إلغاء</button>
-                <button type="submit" className="btn-primary"><Plus size={15} /> إضافة الأسبوع</button>
+              {/* Left Column (Days status, only for LESSON type) */}
+              {weekType === 'LESSON' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, background: 'var(--bg2)', padding: 12, borderRadius: 12, border: '1.5px solid var(--border)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <label style={{ fontWeight: 700, fontSize: 12, color: 'var(--primary)', margin: 0 }}>حالة أيام الأسبوع (الأحد - الخميس)</label>
+                    <span style={{ fontSize: 9, color: 'var(--text-3)', fontStyle: 'italic' }}>
+                      {startDatePicker ? '📅 محدد تلقائياً من التقويم' : 'اختر الأسبوع أولاً'}
+                    </span>
+                  </div>
+
+                  {!startDatePicker && (
+                    <div style={{
+                      fontSize: 11, color: 'var(--text-2)', textAlign: 'center',
+                      padding: '16px 8px', borderRadius: 8,
+                      border: '1.5px dashed var(--border)',
+                      background: 'var(--surface)'
+                    }}>
+                      📅 اختر تاريخ بداية الأسبوع للتعرف على أيام الإجازة والدراسة تلقائياً
+                    </div>
+                  )}
+
+                  {startDatePicker && (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6, marginTop: 4 }}>
+                      {daysList.map((d) => (
+                        <div key={d.day} style={{
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                          padding: '10px 4px', borderRadius: 8, textAlign: 'center',
+                          background: d.type === 'HOLIDAY' ? 'rgba(249,115,22,0.08)' : 'rgba(13,148,136,0.06)',
+                          border: `1px solid ${d.type === 'HOLIDAY' ? 'rgba(249,115,22,0.25)' : 'rgba(13,148,136,0.20)'}`
+                        }}>
+                          <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text)' }}>{d.day}</span>
+                          <span style={{
+                            padding: '3px 6px', borderRadius: 12, fontSize: 10, fontWeight: 700,
+                            background: d.type === 'HOLIDAY' ? '#f97316' : '#0d9488',
+                            color: 'white', whiteSpace: 'nowrap'
+                          }}>
+                            {d.type === 'HOLIDAY' ? '🔴 إجازة' : '🟢 دراسة'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              {/* Modal footer, spanning across columns */}
+              <div className="modal-foot" style={{ gridColumn: weekType === 'LESSON' ? 'span 2' : 'span 1', marginTop: 8, paddingTop: 12, borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+                <button type="button" className="btn-ghost" onClick={() => setShowAdd(false)} style={{ padding: '8px 16px', fontSize: 13 }}>إلغاء</button>
+                <button type="submit" className="btn-primary" style={{ padding: '8px 16px', fontSize: 13 }}><Plus size={15} /> إضافة الأسبوع</button>
               </div>
             </form>
           </div>
@@ -1107,31 +1322,48 @@ function SyllabusPage({ f, notify }: { f: FilterState; notify: (t: 'success' | '
               </div>
             </div>
 
+            {/* Inputs bar for teacher metadata (non-printable) */}
+            <div className="no-print" style={{ background: 'var(--bg2)', padding: '12px 16px', borderRadius: 12, marginBottom: 16, border: '1px solid var(--border)', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+              <div className="field" style={{ marginBottom: 0 }}>
+                <label style={{ fontSize: 11, fontWeight: 700, marginBottom: 4 }}>اسم المدرسة:</label>
+                <input type="text" placeholder="اكتب اسم المدرسة هنا..." value={pdfSchoolName} onChange={e => setPdfSchoolName(e.target.value)} style={{ padding: '6px 10px', fontSize: 12, borderRadius: 8, border: '1.5px solid var(--border)' }} />
+              </div>
+              <div className="field" style={{ marginBottom: 0 }}>
+                <label style={{ fontSize: 11, fontWeight: 700, marginBottom: 4 }}>اسم المعلم / ة:</label>
+                <input type="text" placeholder="اسم المعلم/ة..." value={pdfTeacherName} onChange={e => setPdfTeacherName(e.target.value)} style={{ padding: '6px 10px', fontSize: 12, borderRadius: 8, border: '1.5px solid var(--border)' }} />
+              </div>
+              <div className="field" style={{ marginBottom: 0 }}>
+                <label style={{ fontSize: 11, fontWeight: 700, marginBottom: 4 }}>اسم المدير / ة:</label>
+                <input type="text" placeholder="اسم المدير/ة..." value={pdfPrincipalName} onChange={e => setPdfPrincipalName(e.target.value)} style={{ padding: '6px 10px', fontSize: 12, borderRadius: 8, border: '1.5px solid var(--border)' }} />
+              </div>
+            </div>
+
             <div className="printable-sheet" id="printable-syllabus">
-              {/* Top Header */}
-              <div className="ps-header">
-                <div className="ps-header-side">
-                  <div className="ps-moe-logo">
-                    <span className="ps-moe-title">وزارة التعليم</span>
-                    <span className="ps-moe-sub">Ministry of Education</span>
-                    <span className="ps-moe-sub" style={{ fontSize: 9, marginTop: 2 }}>مدرسة: .....................</span>
+              {/* Top Header: Right (Ministry), Center (Title), Left (Wsylh Logo) */}
+              <div className="ps-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #0d9488', paddingBottom: 16, marginBottom: 16 }}>
+                <div className="ps-header-side" style={{ textAlign: 'right' }}>
+                  <div className="ps-moe-logo" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                    <span style={{ fontWeight: 800, fontSize: 15, color: '#0f172a' }}>المملكة العربية السعودية</span>
+                    <span style={{ fontWeight: 700, fontSize: 13, color: '#334155' }}>وزارة التعليم</span>
                   </div>
                 </div>
 
-                <div className="ps-header-center">
-                  <h1>توزيع المنهج</h1>
-                  <p>لمادة: {subjectName}</p>
+                <div className="ps-header-center" style={{ textAlign: 'center' }}>
+                  <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#0f172a' }}>
+                    {selectedRegion === 'GENERAL' ? 'التوزيع العام للمنهج' : 'توزيع المنهج (مكة المكرمة - جدة - الطائف)'}
+                  </h1>
+                  <p style={{ margin: '4px 0 0 0', fontSize: 14, fontWeight: 700, color: '#0d9488' }}>
+                    لمادة: {subjectName} - {gradeName} ({semesterName})
+                  </p>
                 </div>
 
-                <div className="ps-header-side left">
-                  <div className="ps-wsylh-brand">
-                    <img src="/wsylh-logo-icon.png?v=5" alt="وسيلة" className="ps-brand-logo" />
-                  </div>
+                <div className="ps-header-side left" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                  <img src="/wsylh-logo-full.png?v=6" alt="وسيلة" style={{ height: 65, width: 'auto', objectFit: 'contain' }} />
                 </div>
               </div>
 
-              {/* Sub-Header info bar */}
-              <div className="ps-info-bar">
+              {/* Sub-Header info bar: Subject, Grade, Semester, Academic Year */}
+              <div className="ps-info-bar" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, background: '#e0f2fe', border: '1px solid #bae6fd', borderRadius: 10, padding: '10px 14px', marginBottom: 16, textAlign: 'center' }}>
                 <div className="ps-info-item">
                   <span className="ps-info-label">المادة:</span>
                   <span className="ps-info-val">{subjectName}</span>
@@ -1145,23 +1377,23 @@ function SyllabusPage({ f, notify }: { f: FilterState; notify: (t: 'success' | '
                   <span className="ps-info-val">{semesterName}</span>
                 </div>
                 <div className="ps-info-item">
-                  <span className="ps-info-label">للعام:</span>
+                  <span className="ps-info-label">السنة الدراسية:</span>
                   <span className="ps-info-val">1448 هـ (2026 - 2027 م)</span>
                 </div>
               </div>
 
               {/* Weeks Grid */}
               <div className="ps-weeks-grid">
-                {weeks.map((w, index) => {
+                {weeks.map((w) => {
                   const isHoliday = w.weekType === 'HOLIDAY' || (w.title.includes('إجازة') && !w.title.includes('اليوم الوطني'));
-                  const isExam = w.title.includes('اختبار');
+                  const isExam = w.weekType === 'EXAM' || w.title.includes('اختبار');
                   const parts = w.title.split('|').map(p => p.trim());
 
                   let cardClass = 'ps-week-card';
                   if (isHoliday) cardClass += ' is-holiday';
                   else if (isExam) cardClass += ' is-exam';
 
-                  let displayHeader = isHoliday ? 'إجازة' : getArabicOrdinalWeek(w.weekNumber);
+                  let displayHeader = isHoliday ? 'إجازة' : isExam ? 'اختبارات' : getArabicOrdinalWeek(w.weekNumber);
 
                   return (
                     <div key={w.id} className={cardClass}>
@@ -1197,14 +1429,11 @@ function SyllabusPage({ f, notify }: { f: FilterState; notify: (t: 'success' | '
                 })}
               </div>
 
-              {/* Signatures Footer */}
-              <div className="ps-footer">
-                <div className="ps-signature">
-                  <span>معلم المادة: .......................................</span>
-                </div>
-                <div className="ps-signature">
-                  <span>مدير المدرسة: .......................................</span>
-                </div>
+              {/* 3 Fillable Metadata Fields Box at Bottom */}
+              <div style={{ marginTop: 24, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, padding: '14px 18px', background: '#f8fafc', border: '1.5px solid #cbd5e1', borderRadius: 10, fontSize: 13, fontWeight: 700, color: '#1e293b', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                <div>اسم المدرسة: <span style={{ fontWeight: 800, color: '#0f766e' }}>{pdfSchoolName || '........................................'}</span></div>
+                <div>المعلم / ة: <span style={{ fontWeight: 800, color: '#0f766e' }}>{pdfTeacherName || '........................................'}</span></div>
+                <div>المدير / ة: <span style={{ fontWeight: 800, color: '#0f766e' }}>{pdfPrincipalName || '........................................'}</span></div>
               </div>
             </div>
           </div>
@@ -1262,7 +1491,7 @@ const extractVideoThumbnail = (file: File): Promise<Blob> => {
 };
 
 // ── Activities Page ──
-function ActivitiesPage({ f, notify, theme }: { f: FilterState; notify: (t: 'success' | 'error', m: string) => void; theme: Theme }) {
+function ActivitiesPage({ f, notify, theme: _theme }: { f: FilterState; notify: (t: 'success' | 'error', m: string) => void; theme?: Theme }) {
   const [activities, setActivities] = useState<LessonActivity[]>([]);
   const [loading, setLoading] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
@@ -1688,9 +1917,9 @@ export default function App() {
         </div>
         <div className="auth-logo" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <img
-            src="/wsylh-logo-icon.png?v=5"
+            src="/wsylh-logo-full.png?v=6"
             alt="WSYLH Logo"
-            style={{ height: '80px', width: 'auto', objectFit: 'contain', marginBottom: '12px' }}
+            style={{ height: '95px', width: 'auto', objectFit: 'contain', marginBottom: '12px' }}
           />
           <p>لوحة التحكم الإدارية</p>
         </div>
@@ -1724,9 +1953,9 @@ export default function App() {
       <header className="topbar">
         <div className="topbar-brand">
           <img
-            src="/wsylh-logo-icon.png?v=5"
+            src="/wsylh-logo-full.png?v=6"
             alt="WSYLH Logo"
-            style={{ height: '48px', width: 'auto', objectFit: 'contain', display: 'block' }}
+            style={{ height: '52px', width: 'auto', objectFit: 'contain', display: 'block' }}
           />
         </div>
 

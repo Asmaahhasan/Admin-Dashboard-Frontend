@@ -53,5 +53,9 @@ export interface SyllabusWeek {
   gradeSubjectId: string;
   weekNumber: number;
   title: string;
+  startDateHijri?: string | null;
+  endDateHijri?: string | null;
+  weekType?: string | null;
   activity?: LessonActivity | null;
+  weekDays?: any[] | null;
 }
