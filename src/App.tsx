@@ -1380,52 +1380,53 @@ function SyllabusPage({ f, notify }: { f: FilterState; notify: (t: 'success' | '
               </div>
             </div>
 
-            <div className="printable-sheet" id="printable-syllabus">
-              {/* Top Header: Right (Ministry), Center (Title), Left (Wsylh Logo) */}
-              <div className="ps-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #0d9488', paddingBottom: 16, marginBottom: 16 }}>
+            <div className="printable-sheet printable-syllabus-sheet" id="printable-syllabus">
+              {/* Royal Ministry Executive Banner Header */}
+              <div className="ps-header" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1fr', alignItems: 'center', background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #0369a1 100%)', color: '#ffffff', padding: '18px 24px', borderRadius: 16, marginBottom: 18, borderBottom: '3px solid #f59e0b', boxShadow: '0 4px 15px rgba(15, 23, 42, 0.15)' }}>
                 <div className="ps-header-side" style={{ textAlign: 'right' }}>
                   <div className="ps-moe-logo" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                    <span style={{ fontWeight: 800, fontSize: 15, color: '#0f172a' }}>المملكة العربية السعودية</span>
-                    <span style={{ fontWeight: 700, fontSize: 13, color: '#334155' }}>وزارة التعليم</span>
+                    <span style={{ fontWeight: 800, fontSize: 13, color: '#f8fafc', letterSpacing: 0.2 }}>المملكة العربية السعودية</span>
+                    <span style={{ fontWeight: 700, fontSize: 12, color: '#e2e8f0' }}>وزارة التعليم</span>
+                    <span style={{ fontWeight: 700, fontSize: 11, color: '#f59e0b', marginTop: 2 }}>إدارة التعليم العام</span>
                   </div>
                 </div>
 
                 <div className="ps-header-center" style={{ textAlign: 'center' }}>
-                  <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#0f172a' }}>
-                    {selectedRegion === 'GENERAL' ? 'التوزيع العام للمنهج' : 'توزيع المنهج (مكة المكرمة - جدة - الطائف)'}
+                  <h1 style={{ margin: 0, fontSize: 21, fontWeight: 900, color: '#ffffff', letterSpacing: '-0.3px' }}>
+                    {selectedRegion === 'GENERAL' ? 'الخطة الدراسية والتوزيع الزمني للمنهج' : 'توزيع المنهج المعتمد (مكة المكرمة - جدة - الطائف)'}
                   </h1>
-                  <p style={{ margin: '4px 0 0 0', fontSize: 14, fontWeight: 700, color: '#0d9488' }}>
-                    لمادة: {subjectName} - {gradeName} ({semesterName})
+                  <p style={{ margin: '6px 0 0 0', fontSize: 13.5, fontWeight: 800, color: '#38bdf8' }}>
+                    منصة وسيلة الذكية — المحتوى الدراسي لعام 1448 هـ
                   </p>
                 </div>
 
                 <div className="ps-header-side left" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-                  <img src="/wsylh-logo-full.png?v=6" alt="وسيلة" style={{ height: 65, width: 'auto', objectFit: 'contain' }} />
+                  <img src="/wsylh-logo-full.png?v=6" alt="وسيلة" style={{ height: 60, width: 'auto', objectFit: 'contain' }} />
                 </div>
               </div>
 
-              {/* Sub-Header info bar: Subject, Grade, Semester, Academic Year */}
-              <div className="ps-info-bar" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, background: '#e0f2fe', border: '1px solid #bae6fd', borderRadius: 10, padding: '10px 14px', marginBottom: 16, textAlign: 'center' }}>
+              {/* Sub-Header Executive Capsule Dashboard Bar */}
+              <div className="ps-info-bar" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, background: '#f8fafc', border: '1.5px solid #cbd5e1', borderRadius: 12, padding: '12px 16px', marginBottom: 20, textAlign: 'center' }}>
                 <div className="ps-info-item">
-                  <span className="ps-info-label">المادة:</span>
-                  <span className="ps-info-val">{subjectName}</span>
+                  <span className="ps-info-label" style={{ fontSize: 11.5, fontWeight: 700, color: '#64748b' }}>📚 المادة الدراسية:</span>
+                  <span className="ps-info-val" style={{ fontSize: 13.5, fontWeight: 900, color: '#0f172a', display: 'block', marginTop: 3 }}>{subjectName}</span>
                 </div>
-                <div className="ps-info-item">
-                  <span className="ps-info-label">الصف:</span>
-                  <span className="ps-info-val">{gradeName}</span>
+                <div className="ps-info-item" style={{ borderRight: '1px solid #e2e8f0' }}>
+                  <span className="ps-info-label" style={{ fontSize: 11.5, fontWeight: 700, color: '#64748b' }}>🎓 الصف الدراسي:</span>
+                  <span className="ps-info-val" style={{ fontSize: 13.5, fontWeight: 900, color: '#0f172a', display: 'block', marginTop: 3 }}>{gradeName}</span>
                 </div>
-                <div className="ps-info-item">
-                  <span className="ps-info-label">الفصل:</span>
-                  <span className="ps-info-val">{semesterName}</span>
+                <div className="ps-info-item" style={{ borderRight: '1px solid #e2e8f0' }}>
+                  <span className="ps-info-label" style={{ fontSize: 11.5, fontWeight: 700, color: '#64748b' }}>🗓️ الفصل الدراسي:</span>
+                  <span className="ps-info-val" style={{ fontSize: 13.5, fontWeight: 900, color: '#0f172a', display: 'block', marginTop: 3 }}>{semesterName}</span>
                 </div>
-                <div className="ps-info-item">
-                  <span className="ps-info-label">السنة الدراسية:</span>
-                  <span className="ps-info-val">1448 هـ (2026 - 2027 م)</span>
+                <div className="ps-info-item" style={{ borderRight: '1px solid #e2e8f0' }}>
+                  <span className="ps-info-label" style={{ fontSize: 11.5, fontWeight: 700, color: '#64748b' }}>⏳ العام الدراسي:</span>
+                  <span className="ps-info-val" style={{ fontSize: 13.5, fontWeight: 900, color: '#0d9488', display: 'block', marginTop: 3 }}>1448 هـ (2026 - 2027 م)</span>
                 </div>
               </div>
 
-              {/* Weeks Grid */}
-              <div className="ps-weeks-grid">
+              {/* Executive Matrix Weeks Grid */}
+              <div className="ps-weeks-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12, marginBottom: 24 }}>
                 {weeks.map((w) => {
                   const isHoliday = w.weekType === 'HOLIDAY' || (w.title.includes('إجازة') && !w.title.includes('اليوم الوطني'));
                   const isExam = w.weekType === 'EXAM' || w.title.includes('اختبار');
@@ -1435,32 +1436,82 @@ function SyllabusPage({ f, notify }: { f: FilterState; notify: (t: 'success' | '
                   if (isHoliday) cardClass += ' is-holiday';
                   else if (isExam) cardClass += ' is-exam';
 
-                  let displayHeader = isHoliday ? 'إجازة' : isExam ? 'اختبارات' : getArabicOrdinalWeek(w.weekNumber);
+                  let displayHeader = isHoliday ? 'إجازة رسمية' : isExam ? 'أسبوع الاختبارات' : getArabicOrdinalWeek(w.weekNumber);
 
                   return (
-                    <div key={w.id} className={cardClass}>
-                      <div className="ps-week-head">
+                    <div
+                      key={w.id}
+                      className={cardClass}
+                      style={{
+                        border: isHoliday ? '1.5px solid #f43f5e' : isExam ? '1.5px solid #f59e0b' : '1.5px solid #cbd5e1',
+                        borderRadius: 12,
+                        overflow: 'hidden',
+                        background: isHoliday ? '#fff1f2' : isExam ? '#fffbeb' : '#ffffff',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        boxShadow: '0 2px 6px rgba(0,0,0,0.04)'
+                      }}
+                    >
+                      <div
+                        className="ps-week-head"
+                        style={{
+                          background: isHoliday ? '#e11d48' : isExam ? '#d97706' : '#0f172a',
+                          color: isHoliday || isExam ? '#ffffff' : '#38bdf8',
+                          padding: '7px 10px',
+                          fontWeight: 900,
+                          fontSize: 12.5,
+                          textAlign: 'center',
+                          borderBottom: '1.5px solid #cbd5e1'
+                        }}
+                      >
                         <span>{displayHeader}</span>
                       </div>
-                      <div className="ps-week-body">
+                      <div className="ps-week-body" style={{ padding: '10px 10px', fontSize: 11, flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
                         {(w.startDateHijri || w.endDateHijri) && (
-                          <div className="ps-card-dates">
-                            {w.startDateHijri && <div>{w.startDateHijri}</div>}
-                            {w.endDateHijri && <div>{w.endDateHijri}</div>}
+                          <div
+                            className="ps-card-dates"
+                            style={{
+                              background: '#f1f5f9',
+                              border: '1px solid #cbd5e1',
+                              borderRadius: 6,
+                              padding: '4px 6px',
+                              fontSize: 10,
+                              color: '#334155',
+                              textAlign: 'center',
+                              fontWeight: 800,
+                              marginBottom: 4
+                            }}
+                          >
+                            <span>📅 </span>
+                            {w.startDateHijri && <span>من {w.startDateHijri} </span>}
+                            {w.endDateHijri && <span>إلى {w.endDateHijri}</span>}
                           </div>
                         )}
                         {parts.map((p, idx) => {
                           const isSpecialBadge = p.includes('إجازة اليوم الوطني');
                           if (isSpecialBadge) {
                             return (
-                              <div key={idx} className="ps-national-badge">
+                              <div
+                                key={idx}
+                                className="ps-national-badge"
+                                style={{
+                                  background: 'linear-gradient(135deg, #fff1f2 0%, #fef3c7 100%)',
+                                  color: '#991b1b',
+                                  padding: '6px 8px',
+                                  borderRadius: 6,
+                                  border: '1px solid #f87171',
+                                  fontSize: 10.5,
+                                  fontWeight: 900,
+                                  textAlign: 'center'
+                                }}
+                              >
                                 <span>📍 {p}</span>
                               </div>
                             );
                           }
                           return (
-                            <div key={idx} className="ps-week-part">
-                              {parts.length > 1 && <span className="ps-bullet">•</span>}
+                            <div key={idx} className="ps-week-item" style={{ display: 'flex', gap: 6, fontSize: 11, fontWeight: 700, color: '#1e293b', lineHeight: 1.4, alignItems: 'baseline' }}>
+                              <span className="ps-item-bullet" style={{ color: '#f59e0b', fontWeight: 900 }}>❖</span>
                               <span>{p}</span>
                             </div>
                           );
@@ -1471,11 +1522,57 @@ function SyllabusPage({ f, notify }: { f: FilterState; notify: (t: 'success' | '
                 })}
               </div>
 
-              {/* 3 Fillable Metadata Fields Box at Bottom */}
-              <div style={{ marginTop: 24, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, padding: '14px 18px', background: '#f8fafc', border: '1.5px solid #cbd5e1', borderRadius: 10, fontSize: 13, fontWeight: 700, color: '#1e293b', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
-                <div>اسم المدرسة: <span style={{ fontWeight: 800, color: '#0f766e' }}>{pdfSchoolName || '........................................'}</span></div>
-                <div>المعلم / ة: <span style={{ fontWeight: 800, color: '#0f766e' }}>{pdfTeacherName || '........................................'}</span></div>
-                <div>المدير / ة: <span style={{ fontWeight: 800, color: '#0f766e' }}>{pdfPrincipalName || '........................................'}</span></div>
+              {/* Official Ministry Verification & Signatures Table */}
+              <div
+                className="ps-footer-table"
+                style={{
+                  marginTop: 24,
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr 1fr',
+                  gap: 16,
+                  padding: '16px 20px',
+                  background: '#f8fafc',
+                  border: '1.5px solid #cbd5e1',
+                  borderRadius: 12,
+                  fontSize: 12.5,
+                  fontWeight: 800,
+                  color: '#1e293b',
+                  pageBreakInside: 'avoid',
+                  breakInside: 'avoid'
+                }}
+              >
+                <div style={{ borderLeft: '1px solid #e2e8f0', paddingLeft: 10 }}>
+                  <div style={{ color: '#64748b', fontSize: 11, fontWeight: 700 }}>المؤسسة التعليمية:</div>
+                  <div style={{ marginTop: 4, fontWeight: 900, color: '#0f766e', fontSize: 13 }}>{pdfSchoolName || '........................................'}</div>
+                </div>
+                <div style={{ borderLeft: '1px solid #e2e8f0', paddingLeft: 10 }}>
+                  <div style={{ color: '#64748b', fontSize: 11, fontWeight: 700 }}>توقيع معلم/ة المادة:</div>
+                  <div style={{ marginTop: 4, fontWeight: 900, color: '#0f766e', fontSize: 13 }}>{pdfTeacherName || '........................................'}</div>
+                </div>
+                <div>
+                  <div style={{ color: '#64748b', fontSize: 11, fontWeight: 700 }}>اعتماد مدير/ة المدرسة:</div>
+                  <div style={{ marginTop: 4, fontWeight: 900, color: '#0f766e', fontSize: 13 }}>{pdfPrincipalName || '........................................'}</div>
+                </div>
+              </div>
+
+              {/* Official Wsylh Copyright & System Authenticity Banner */}
+              <div
+                className="ps-footer-copyright"
+                style={{
+                  marginTop: 14,
+                  padding: '8px 16px',
+                  background: '#f1f5f9',
+                  border: '1px dashed #cbd5e1',
+                  borderRadius: 8,
+                  textAlign: 'center',
+                  fontSize: 10.5,
+                  fontWeight: 700,
+                  color: '#475569',
+                  pageBreakInside: 'avoid',
+                  breakInside: 'avoid'
+                }}
+              >
+                <span>تم الاعتماد والتوليد آلياً عبر نظام وسيلة الذكي للمحتوى التعليمي © Wsylh.com — وثيقة رسمية متوافقة مع الخطة الدراسية لوزارة التعليم</span>
               </div>
             </div>
           </div>
