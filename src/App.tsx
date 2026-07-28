@@ -534,7 +534,7 @@ function FilterBar({ f, hideSubjects }: { f: FilterState, hideSubjects?: boolean
         {!hideSubjects && f.gradeId && f.semesterId && (
           <div className="filter-section" style={{ minWidth: 260 }}>
             <div className="filter-section-label">
-              <span className="step-num">{showTracks ? '5' : '4'}</span> اختر المادة (قائمة منسدلة)
+              <span className="step-num">{showTracks ? '5' : '4'}</span> اختر المادة
             </div>
             <select
               className="select-input"
@@ -1381,21 +1381,36 @@ function SyllabusPage({ f, notify }: { f: FilterState; notify: (t: 'success' | '
             </div>
 
             <div className="printable-sheet printable-syllabus-sheet" id="printable-syllabus">
-              {/* Royal Ministry Executive Banner Header */}
-              <div className="ps-header" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1fr', alignItems: 'center', background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #0369a1 100%)', color: '#ffffff', padding: '18px 24px', borderRadius: 16, marginBottom: 18, borderBottom: '3px solid #f59e0b', boxShadow: '0 4px 15px rgba(15, 23, 42, 0.15)' }}>
+              {/* Prestigious Light Ministry Executive Header */}
+              <div
+                className="ps-header"
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 2fr 1fr',
+                  alignItems: 'center',
+                  background: 'linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%)',
+                  color: '#0f172a',
+                  padding: '18px 24px',
+                  borderRadius: 16,
+                  marginBottom: 18,
+                  border: '2px solid #059669',
+                  borderBottom: '4px solid #d97706',
+                  boxShadow: '0 4px 15px rgba(5, 150, 105, 0.08)'
+                }}
+              >
                 <div className="ps-header-side" style={{ textAlign: 'right' }}>
                   <div className="ps-moe-logo" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                    <span style={{ fontWeight: 800, fontSize: 13, color: '#f8fafc', letterSpacing: 0.2 }}>المملكة العربية السعودية</span>
-                    <span style={{ fontWeight: 700, fontSize: 12, color: '#e2e8f0' }}>وزارة التعليم</span>
-                    <span style={{ fontWeight: 700, fontSize: 11, color: '#f59e0b', marginTop: 2 }}>إدارة التعليم العام</span>
+                    <span style={{ fontWeight: 900, fontSize: 13.5, color: '#065f46', letterSpacing: 0.2 }}>المملكة العربية السعودية</span>
+                    <span style={{ fontWeight: 800, fontSize: 12.5, color: '#0f172a' }}>وزارة التعليم</span>
+                    <span style={{ fontWeight: 800, fontSize: 11, color: '#d97706', marginTop: 2 }}>إدارة التعليم العام</span>
                   </div>
                 </div>
 
                 <div className="ps-header-center" style={{ textAlign: 'center' }}>
-                  <h1 style={{ margin: 0, fontSize: 21, fontWeight: 900, color: '#ffffff', letterSpacing: '-0.3px' }}>
+                  <h1 style={{ margin: 0, fontSize: 22, fontWeight: 900, color: '#064e3b', letterSpacing: '-0.3px' }}>
                     {selectedRegion === 'GENERAL' ? 'الخطة الدراسية والتوزيع الزمني للمنهج' : 'توزيع المنهج المعتمد (مكة المكرمة - جدة - الطائف)'}
                   </h1>
-                  <p style={{ margin: '6px 0 0 0', fontSize: 13.5, fontWeight: 800, color: '#38bdf8' }}>
+                  <p style={{ margin: '6px 0 0 0', fontSize: 13.5, fontWeight: 800, color: '#0d9488' }}>
                     منصة وسيلة الذكية — المحتوى الدراسي لعام 1448 هـ
                   </p>
                 </div>
@@ -1405,22 +1420,36 @@ function SyllabusPage({ f, notify }: { f: FilterState; notify: (t: 'success' | '
                 </div>
               </div>
 
-              {/* Sub-Header Executive Capsule Dashboard Bar */}
-              <div className="ps-info-bar" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, background: '#f8fafc', border: '1.5px solid #cbd5e1', borderRadius: 12, padding: '12px 16px', marginBottom: 20, textAlign: 'center' }}>
+              {/* Sub-Header Light Royal Capsule Dashboard Bar */}
+              <div
+                className="ps-info-bar"
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(4, 1fr)',
+                  gap: 8,
+                  background: 'linear-gradient(to left, #f0fdf4, #f0f9ff, #fffbeb)',
+                  border: '1.5px solid #0284c7',
+                  borderRadius: 12,
+                  padding: '12px 16px',
+                  marginBottom: 20,
+                  textAlign: 'center',
+                  boxShadow: '0 2px 8px rgba(2, 132, 199, 0.05)'
+                }}
+              >
                 <div className="ps-info-item">
-                  <span className="ps-info-label" style={{ fontSize: 11.5, fontWeight: 700, color: '#64748b' }}>📚 المادة الدراسية:</span>
+                  <span className="ps-info-label" style={{ fontSize: 11.5, fontWeight: 700, color: '#0369a1' }}>📚 المادة الدراسية:</span>
                   <span className="ps-info-val" style={{ fontSize: 13.5, fontWeight: 900, color: '#0f172a', display: 'block', marginTop: 3 }}>{subjectName}</span>
                 </div>
-                <div className="ps-info-item" style={{ borderRight: '1px solid #e2e8f0' }}>
-                  <span className="ps-info-label" style={{ fontSize: 11.5, fontWeight: 700, color: '#64748b' }}>🎓 الصف الدراسي:</span>
+                <div className="ps-info-item" style={{ borderRight: '1px solid #cbd5e1' }}>
+                  <span className="ps-info-label" style={{ fontSize: 11.5, fontWeight: 700, color: '#0369a1' }}>🎓 الصف الدراسي:</span>
                   <span className="ps-info-val" style={{ fontSize: 13.5, fontWeight: 900, color: '#0f172a', display: 'block', marginTop: 3 }}>{gradeName}</span>
                 </div>
-                <div className="ps-info-item" style={{ borderRight: '1px solid #e2e8f0' }}>
-                  <span className="ps-info-label" style={{ fontSize: 11.5, fontWeight: 700, color: '#64748b' }}>🗓️ الفصل الدراسي:</span>
+                <div className="ps-info-item" style={{ borderRight: '1px solid #cbd5e1' }}>
+                  <span className="ps-info-label" style={{ fontSize: 11.5, fontWeight: 700, color: '#0369a1' }}>🗓️ الفصل الدراسي:</span>
                   <span className="ps-info-val" style={{ fontSize: 13.5, fontWeight: 900, color: '#0f172a', display: 'block', marginTop: 3 }}>{semesterName}</span>
                 </div>
-                <div className="ps-info-item" style={{ borderRight: '1px solid #e2e8f0' }}>
-                  <span className="ps-info-label" style={{ fontSize: 11.5, fontWeight: 700, color: '#64748b' }}>⏳ العام الدراسي:</span>
+                <div className="ps-info-item" style={{ borderRight: '1px solid #cbd5e1' }}>
+                  <span className="ps-info-label" style={{ fontSize: 11.5, fontWeight: 700, color: '#0369a1' }}>⏳ العام الدراسي:</span>
                   <span className="ps-info-val" style={{ fontSize: 13.5, fontWeight: 900, color: '#0d9488', display: 'block', marginTop: 3 }}>1448 هـ (2026 - 2027 م)</span>
                 </div>
               </div>
@@ -1443,10 +1472,10 @@ function SyllabusPage({ f, notify }: { f: FilterState; notify: (t: 'success' | '
                       key={w.id}
                       className={cardClass}
                       style={{
-                        border: isHoliday ? '1.5px solid #f43f5e' : isExam ? '1.5px solid #f59e0b' : '1.5px solid #cbd5e1',
+                        border: isHoliday ? '2px solid #f97316' : isExam ? '2px solid #eab308' : '1.5px solid #bfdbfe',
                         borderRadius: 12,
                         overflow: 'hidden',
-                        background: isHoliday ? '#fff1f2' : isExam ? '#fffbeb' : '#ffffff',
+                        background: isHoliday ? '#fff8e6' : isExam ? '#fefce8' : '#ffffff',
                         display: 'flex',
                         flexDirection: 'column',
                         boxShadow: '0 2px 6px rgba(0,0,0,0.04)'
@@ -1455,13 +1484,17 @@ function SyllabusPage({ f, notify }: { f: FilterState; notify: (t: 'success' | '
                       <div
                         className="ps-week-head"
                         style={{
-                          background: isHoliday ? '#e11d48' : isExam ? '#d97706' : '#0f172a',
-                          color: isHoliday || isExam ? '#ffffff' : '#38bdf8',
+                          background: isHoliday
+                            ? 'linear-gradient(135deg, #ea580c 0%, #c2410c 100%)'
+                            : isExam
+                            ? 'linear-gradient(135deg, #d97706 0%, #b45309 100%)'
+                            : 'linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%)',
+                          color: '#ffffff',
                           padding: '7px 10px',
                           fontWeight: 900,
                           fontSize: 12.5,
                           textAlign: 'center',
-                          borderBottom: '1.5px solid #cbd5e1'
+                          borderBottom: isHoliday ? '2px solid #f97316' : isExam ? '2px solid #f59e0b' : '2px solid #3b82f6'
                         }}
                       >
                         <span>{displayHeader}</span>
@@ -1471,47 +1504,76 @@ function SyllabusPage({ f, notify }: { f: FilterState; notify: (t: 'success' | '
                           <div
                             className="ps-card-dates"
                             style={{
-                              background: '#f1f5f9',
-                              border: '1px solid #cbd5e1',
+                              background: '#f0f9ff',
+                              border: '1px solid #7dd3fc',
                               borderRadius: 6,
-                              padding: '4px 6px',
+                              padding: '5px 6px',
                               fontSize: 10,
-                              color: '#334155',
+                              color: '#0369a1',
                               textAlign: 'center',
                               fontWeight: 800,
-                              marginBottom: 4
+                              marginBottom: 4,
+                              lineHeight: 1.45
                             }}
                           >
                             <span>📅 </span>
-                            {w.startDateHijri && <span>من {w.startDateHijri} </span>}
-                            {w.endDateHijri && <span>إلى {w.endDateHijri}</span>}
+                            {w.startDateHijri && <div style={{ display: 'inline' }}>{w.startDateHijri} </div>}
+                            {w.endDateHijri && <div style={{ display: 'inline' }}>{w.endDateHijri}</div>}
                           </div>
                         )}
                         {parts.map((p, idx) => {
-                          const isSpecialBadge = p.includes('إجازة اليوم الوطني');
-                          if (isSpecialBadge) {
+                          const isSpecialHoliday = p.includes('إجازة') || p.includes('عطلة') || p.includes('اليوم الوطني');
+                          const isSpecialExam = p.includes('اختبار') || p.includes('تقويم') || p.includes('امتحان');
+
+                          if (isSpecialHoliday) {
                             return (
                               <div
                                 key={idx}
                                 className="ps-national-badge"
                                 style={{
-                                  background: 'linear-gradient(135deg, #fff1f2 0%, #fef3c7 100%)',
+                                  background: 'linear-gradient(135deg, #fff1f2 0%, #fee2e2 100%)',
                                   color: '#991b1b',
                                   padding: '6px 8px',
-                                  borderRadius: 6,
-                                  border: '1px solid #f87171',
+                                  borderRadius: 8,
+                                  border: '1.5px solid #f87171',
                                   fontSize: 10.5,
                                   fontWeight: 900,
-                                  textAlign: 'center'
+                                  textAlign: 'center',
+                                  margin: '3px 0',
+                                  boxShadow: '0 2px 6px rgba(248,113,113,0.15)'
                                 }}
                               >
-                                <span>📍 {p}</span>
+                                <span>🌴 {p}</span>
                               </div>
                             );
                           }
+
+                          if (isSpecialExam && !isExam) {
+                            return (
+                              <div
+                                key={idx}
+                                className="ps-exam-badge"
+                                style={{
+                                  background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
+                                  color: '#92400e',
+                                  padding: '6px 8px',
+                                  borderRadius: 8,
+                                  border: '1.5px solid #f59e0b',
+                                  fontSize: 10.5,
+                                  fontWeight: 900,
+                                  textAlign: 'center',
+                                  margin: '3px 0',
+                                  boxShadow: '0 2px 6px rgba(245,158,11,0.15)'
+                                }}
+                              >
+                                <span>📝 {p}</span>
+                              </div>
+                            );
+                          }
+
                           return (
                             <div key={idx} className="ps-week-item" style={{ display: 'flex', gap: 6, fontSize: 11, fontWeight: 700, color: '#1e293b', lineHeight: 1.4, alignItems: 'baseline' }}>
-                              <span className="ps-item-bullet" style={{ color: '#f59e0b', fontWeight: 900 }}>❖</span>
+                              <span className="ps-item-bullet" style={{ color: '#d97706', fontWeight: 900 }}>❖</span>
                               <span>{p}</span>
                             </div>
                           );
