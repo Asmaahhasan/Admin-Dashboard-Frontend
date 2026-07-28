@@ -470,114 +470,110 @@ function FilterBar({ f, hideSubjects }: { f: FilterState, hideSubjects?: boolean
   const selectedSubject = f.subjects.find(s => s.subjectId === f.subjectId);
   const showTracks = f.tracks.length > 0;
 
-  const availableSemesters = f.semesters.filter(s => !f.gradeId || s.gradeId === f.gradeId);
-
   return (
-    <div className="filter-bar-v3" style={{ padding: '16px 22px', marginBottom: 20 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, borderBottom: '1px solid var(--border)', paddingBottom: 10 }}>
-        <BookMarked size={18} style={{ color: 'var(--primary)' }} />
-        <span style={{ fontWeight: 800, fontSize: 15, color: 'var(--text)' }}>تصفية وعرض المحتوى الدراسي:</span>
-        <span style={{ fontSize: 12, color: 'var(--text-2)', marginRight: 'auto' }}>اختر المرحلة والمادة من القوائم المنسدلة (Dropdown)</span>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14, alignItems: 'center' }}>
-        {/* 1. المرحلة الدراسية */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-          <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)' }}>1. المرحلة الدراسية:</label>
-          <select
-            className="select-input"
-            value={f.stageId || ''}
-            onChange={e => f.setStageId(e.target.value)}
-            style={{ padding: '9px 12px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)', fontWeight: 700, fontSize: 13, outline: 'none', cursor: 'pointer' }}
-          >
-            <option value="">-- اختر المرحلة --</option>
+    <div className="filter-bar-v3">
+      <div className="filter-grid">
+        <div className="filter-section">
+          <div className="filter-section-label">
+            <span className="step-num">1</span> اختر المرحلة الدراسية
+          </div>
+          <div className="chip-grid">
             {f.stages.map(s => (
-              <option key={s.id} value={s.id}>{s.name}</option>
+              <button key={s.id} className={`chip ${f.stageId === s.id ? 'selected' : ''}`} onClick={() => f.setStageId(s.id)}>
+                {s.name}
+              </button>
             ))}
-          </select>
+            {f.stages.length === 0 && <span className="filter-empty">لا توجد مراحل — أضفها أولاً</span>}
+          </div>
         </div>
 
-        {/* 2. المسار (إن وجد) */}
         {f.stageId && showTracks && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-            <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)' }}>2. المسار الدراسي:</label>
-            <select
-              className="select-input"
-              value={f.trackId || ''}
-              onChange={e => f.setTrackId(e.target.value)}
-              style={{ padding: '9px 12px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)', fontWeight: 700, fontSize: 13, outline: 'none', cursor: 'pointer' }}
-            >
-              <option value="">-- اختر المسار --</option>
+          <div className="filter-section">
+            <div className="filter-section-label">
+              <span className="step-num">2</span> اختر المسار
+            </div>
+            <div className="chip-grid">
               {f.tracks.map(t => (
-                <option key={t.id} value={t.id}>{t.name}</option>
+                <button key={t.id} className={`chip ${f.trackId === t.id ? 'selected' : ''}`} onClick={() => f.setTrackId(t.id)}>{t.name}</button>
               ))}
-            </select>
+            </div>
           </div>
         )}
 
-        {/* 3. الصف الدراسي */}
         {f.stageId && (!showTracks || f.trackId) && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-            <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)' }}>{showTracks ? '3' : '2'}. الصف الدراسي:</label>
-            <select
-              className="select-input"
-              value={f.gradeId || ''}
-              onChange={e => f.setGradeId(e.target.value)}
-              style={{ padding: '9px 12px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)', fontWeight: 700, fontSize: 13, outline: 'none', cursor: 'pointer' }}
-            >
-              <option value="">-- اختر الصف --</option>
+          <div className="filter-section">
+            <div className="filter-section-label">
+              <span className="step-num">{showTracks ? '3' : '2'}</span> اختر الصف
+            </div>
+            <div className="chip-grid">
+              {f.grades.length === 0 && <span className="filter-empty">لا توجد صفوف</span>}
               {f.grades.map(g => (
-                <option key={g.id} value={g.id}>{g.name}</option>
+                <button key={g.id} className={`chip ${f.gradeId === g.id ? 'selected' : ''}`} onClick={() => f.setGradeId(g.id)}>
+                  {g.name.replace('الصف ', '').replace(' الابتدائي', '').replace(' المتوسط', '').replace(' الثانوي', '')}
+                </button>
               ))}
-            </select>
+            </div>
           </div>
         )}
 
-        {/* 4. الفصل الدراسي */}
         {f.gradeId && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-            <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)' }}>{showTracks ? '4' : '3'}. الفصل الدراسي:</label>
-            <select
-              className="select-input"
-              value={f.semesterId || ''}
-              onChange={e => f.setSemesterId(e.target.value)}
-              style={{ padding: '9px 12px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)', fontWeight: 700, fontSize: 13, outline: 'none', cursor: 'pointer' }}
-            >
-              <option value="">-- اختر الفصل --</option>
-              {availableSemesters.map(s => (
-                <option key={s.id} value={s.id}>{s.name}</option>
+          <div className="filter-section">
+            <div className="filter-section-label">
+              <span className="step-num">{showTracks ? '4' : '3'}</span> اختر الفصل الدراسي
+            </div>
+            <div className="chip-grid">
+              {f.semesters.filter(s => s.gradeId === f.gradeId).map(s => (
+                <button key={s.id} className={`chip ${f.semesterId === s.id ? 'selected' : ''}`} onClick={() => f.setSemesterId(s.id)}>
+                  {s.name}
+                </button>
               ))}
-            </select>
+            </div>
           </div>
         )}
 
-        {/* 5. المادة الدراسية (Dropdown متميز وسلس) */}
         {!hideSubjects && f.gradeId && f.semesterId && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-            <label style={{ fontSize: 12, fontWeight: 800, color: 'var(--primary)' }}>{showTracks ? '5' : '4'}. المادة الدراسية:</label>
+          <div className="filter-section" style={{ minWidth: 260 }}>
+            <div className="filter-section-label">
+              <span className="step-num">{showTracks ? '5' : '4'}</span> اختر المادة (قائمة منسدلة)
+            </div>
             <select
               className="select-input"
               value={f.subjectId || ''}
               onChange={e => f.setSubjectId(e.target.value)}
-              style={{ padding: '9px 12px', borderRadius: 10, border: '2px solid var(--primary)', background: 'var(--surface)', color: 'var(--text)', fontWeight: 800, fontSize: 13, outline: 'none', cursor: 'pointer', boxShadow: '0 2px 10px rgba(2,132,199,0.15)' }}
+              style={{
+                width: '100%',
+                maxWidth: 420,
+                padding: '11px 16px',
+                borderRadius: 12,
+                border: '2px solid var(--primary)',
+                background: 'var(--surface)',
+                color: 'var(--text-1)',
+                fontWeight: 800,
+                fontSize: 14,
+                cursor: 'pointer',
+                outline: 'none',
+                boxShadow: '0 4px 12px rgba(2,132,199,0.15)'
+              }}
             >
               <option value="">-- اختر المادة --</option>
               {f.subjects.map(s => (
-                <option key={s.subjectId} value={s.subjectId}>{s.name}</option>
+                <option key={s.subjectId} value={s.subjectId}>
+                  {s.name}
+                </option>
               ))}
             </select>
-            {f.subjects.length === 0 && <span style={{ fontSize: 11, color: 'var(--danger)', fontWeight: 600 }}>لا توجد مواد مرتبطة بهذا الصف</span>}
+            {f.subjects.length === 0 && <span className="filter-empty">لا توجد مواد مرتبطة</span>}
           </div>
         )}
       </div>
 
       {f.gradeSubjectId && (
-        <div className="filter-summary" style={{ marginTop: 14, paddingTop: 10, borderTop: '1px dashed var(--border)', display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+        <div className="filter-summary">
           {selectedStage && <span className="summary-badge badge-stage">{selectedStage.name} ✓</span>}
           {f.trackId && <span className="summary-badge badge-track">{f.tracks.find(t => t.id === f.trackId)?.name} ✓</span>}
           {selectedGrade && <span className="summary-badge badge-grade">{selectedGrade.name} ✓</span>}
           {selectedSemester && <span className="summary-badge badge-semester">{selectedSemester.name} ✓</span>}
-          {selectedSubject && <span className="summary-badge badge-subject" style={{ background: 'var(--primary)', color: '#fff', fontWeight: 800 }}>{selectedSubject.name} ✓</span>}
+          {selectedSubject && <span className="summary-badge badge-subject">{selectedSubject.name} ✓</span>}
         </div>
       )}
     </div>
