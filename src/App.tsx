@@ -1502,10 +1502,10 @@ function SyllabusPage({ f, notify }: { f: FilterState; notify: (t: 'success' | '
                       key={w.id}
                       className={cardClass}
                       style={{
-                        border: isHoliday ? '1.5px solid #fca5a5' : isExam ? '1.5px solid #fde68a' : '1.5px solid #bfdbfe',
+                        border: isHoliday ? '1.5px solid #fed7aa' : isExam ? '1.5px solid #a7f3d0' : '1.5px solid #bfdbfe',
                         borderRadius: 8,
                         overflow: 'hidden',
-                        background: isHoliday ? '#fff1f2' : isExam ? '#fffbeb' : '#ffffff',
+                        background: isHoliday ? '#fff7ed' : isExam ? '#f0fdf4' : '#ffffff',
                         display: 'flex',
                         flexDirection: 'column',
                         justifyContent: 'space-between',
@@ -1517,16 +1517,16 @@ function SyllabusPage({ f, notify }: { f: FilterState; notify: (t: 'success' | '
                         className="ps-week-head"
                         style={{
                           background: isHoliday
-                            ? 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)'
+                            ? 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)'
                             : isExam
-                              ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
+                              ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
                               : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
                           color: '#ffffff',
                           padding: '4px 6px',
                           fontWeight: 900,
                           fontSize: 10.5,
                           textAlign: 'center',
-                          borderBottom: isHoliday ? '1.5px solid #fca5a5' : isExam ? '1.5px solid #fde68a' : '1.5px solid #93c5fd'
+                          borderBottom: isHoliday ? '1.5px solid #fed7aa' : isExam ? '1.5px solid #a7f3d0' : '1.5px solid #93c5fd'
                         }}
                       >
                         <span>{displayHeader}</span>
@@ -1569,11 +1569,11 @@ function SyllabusPage({ f, notify }: { f: FilterState; notify: (t: 'success' | '
                                   key={idx}
                                   className="ps-national-badge"
                                   style={{
-                                    background: '#fff1f2',
-                                    color: '#9f1239',
+                                    background: '#ffedd5',
+                                    color: '#9a3412',
                                     padding: '5px 6px',
                                     borderRadius: 8,
-                                    border: '1.5px solid #fecdd3',
+                                    border: '1.5px solid #fdba74',
                                     fontSize: 9.5,
                                     fontWeight: 800,
                                     textAlign: 'center',
@@ -1598,11 +1598,11 @@ function SyllabusPage({ f, notify }: { f: FilterState; notify: (t: 'success' | '
                                   key={idx}
                                   className="ps-exam-badge"
                                   style={{
-                                    background: '#fffbeb',
-                                    color: '#92400e',
+                                    background: '#dcfce7',
+                                    color: '#166534',
                                     padding: '4px 6px',
                                     borderRadius: 6,
-                                    border: '1.5px solid #fde68a',
+                                    border: '1.5px solid #86efac',
                                     fontSize: 9,
                                     fontWeight: 800,
                                     textAlign: 'center',
