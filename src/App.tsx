@@ -908,7 +908,9 @@ function SyllabusPage({ f, notify }: { f: FilterState; notify: (t: 'success' | '
 
     setPdfLoading(true);
     try {
-      const htmlContent = el.outerHTML;
+      const origin = typeof window !== 'undefined' ? window.location.origin : 'https://admin.wsyelhi.com';
+      let htmlContent = el.outerHTML;
+      htmlContent = htmlContent.replace(/src="\/([^"]+)"/g, `src="${origin}/$1"`);
       const pdfTitle = `توزيع ${subjectName} ${gradeName} ${stageName}`.replace(/\s+/g, ' ').trim();
 
       const pdfExportUrl = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
@@ -1677,8 +1679,6 @@ function SyllabusPage({ f, notify }: { f: FilterState; notify: (t: 'success' | '
                   gap: 6
                 }}
               >
-                <span>🌐</span>
-                <span>تم الاعتماد والتوليد آلياً عبر نظام وسيلة المعتمَد — https://wsyelhi.com</span>
               </div>
             </div>
           </div>
