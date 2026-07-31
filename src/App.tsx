@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { api, getToken, removeToken } from './api';
 import {
   LogOut, Plus, Trash2, Upload, Link as LinkIcon,
   FileText, Gamepad2, Tv, Save,
   CheckCircle, X, AlertCircle, CalendarDays, Layers,
   Settings, Pencil, Sun, Moon, ChevronRight,
-  GraduationCap, BookMarked, Library, Image, Printer, Download, ArrowUpDown, BookOpen
+  GraduationCap, BookMarked, Library, Image, Printer, Download, ArrowUpDown, BookOpen as _BookOpen
 } from 'lucide-react';
 import './index.css';
 
@@ -291,79 +291,26 @@ function CurriculumPage({ notify }: { notify: (t: 'success' | 'error', m: string
     try { await api.assignSubjectToGrade(selGradeId, selSemId, name); setAddingSubject(false); await loadSubjects(selGradeId, selSemId); notify('success', 'تمت الإضافة.'); }
     catch (e: any) { notify('error', e.message); }
   };
-  const [subjectLessons, setSubjectLessons] = useState<{ id: string; lessonTitle: string }[]>([]);
-  const [addingLesson, setAddingLesson] = useState(false);
-
-  const loadLessons = async (gSubId: string) => {
-    try {
-      const acts = await api.getActivities(gSubId);
-      setSubjectLessons((acts || []).map((a: any) => ({ id: a.id, lessonTitle: a.lessonTitle })));
-    } catch {
-      setSubjectLessons([]);
-    }
-  };
-
-  const pickSubject = (sub: SubjectOption) => {
-    if (selGradeSubjectId === sub.gradeSubjectId) {
-      setSelGradeSubjectId('');
-      setSubjectLessons([]);
-    } else {
-      setSelGradeSubjectId(sub.gradeSubjectId);
-      loadLessons(sub.gradeSubjectId);
-    }
-  };
-
-  const handleAddLesson = async (name: string) => {
-    if (!selGradeSubjectId) return;
-    try {
-      await api.saveActivity({ gradeSubjectId: selGradeSubjectId, lessonTitle: name, items: [] });
-      setAddingLesson(false);
-      await loadLessons(selGradeSubjectId);
-      notify('success', 'تمت إضافة الدرس بنجاح.');
-    } catch (e: any) {
-      notify('error', e.message || 'فشل إضافة الدرس');
-    }
-  };
-
-  const handleEditLesson = async (id: string, name: string) => {
-    try {
-      await api.updateActivity(id, { lessonTitle: name });
-      setEditingId('');
-      await loadLessons(selGradeSubjectId);
-      notify('success', 'تم تعديل اسم الدرس.');
-    } catch (e: any) {
-      notify('error', e.message || 'فشل التعديل');
-    }
-  };
-
-  const handleDeleteLesson = (id: string, name: string) => confirmDelete(
-    `حذف الدرس "${name}" من المادة؟`,
-    async () => {
-      await api.deleteActivity(id);
-      await loadLessons(selGradeSubjectId);
-    }
-  );
-
   const handleDeleteSubject = (sub: SubjectOption) => confirmDelete(
     `سيتم حذف مادة "${sub.name}" من هذا الفصل مع جميع أسابيع المنهج والأنشطة المرتبطة.`,
-    async () => { await api.removeSubjectFromGrade(sub.gradeSubjectId); if (selGradeSubjectId === sub.gradeSubjectId) { setSelGradeSubjectId(''); setSubjectLessons([]); } await loadSubjects(selGradeId, selSemId); }
+    async () => { await api.removeSubjectFromGrade(sub.gradeSubjectId); if (selGradeSubjectId === sub.gradeSubjectId) setSelGradeSubjectId(''); await loadSubjects(selGradeId, selSemId); }
   );
 
   const pickStage = (s: Stage) => {
     if (selStageId === s.id) { setSelStageId(''); } else { setSelStageId(s.id); }
-    setSelTrackId(''); setSelGradeId(''); setSelSemId(''); setSelGradeSubjectId(''); setSubjectLessons([]); setSemesters([]); setGradeSubjects([]);
+    setSelTrackId(''); setSelGradeId(''); setSelSemId(''); setSelGradeSubjectId(''); setSemesters([]); setGradeSubjects([]);
   };
   const pickTrack = (t: Track) => {
     if (selTrackId === t.id) { setSelTrackId(''); } else { setSelTrackId(t.id); }
-    setSelGradeId(''); setSelSemId(''); setSelGradeSubjectId(''); setSubjectLessons([]); setSemesters([]); setGradeSubjects([]);
+    setSelGradeId(''); setSelSemId(''); setSelGradeSubjectId(''); setSemesters([]); setGradeSubjects([]);
   };
   const pickGrade = (g: Grade) => {
-    if (selGradeId === g.id) { setSelGradeId(''); setSelSemId(''); setSelGradeSubjectId(''); setSubjectLessons([]); setSemesters([]); setGradeSubjects([]); }
-    else { setSelGradeId(g.id); setSelSemId(''); setSelGradeSubjectId(''); setSubjectLessons([]); setGradeSubjects([]); loadSemesters(g.id); }
+    if (selGradeId === g.id) { setSelGradeId(''); setSelSemId(''); setSelGradeSubjectId(''); setSemesters([]); setGradeSubjects([]); }
+    else { setSelGradeId(g.id); setSelSemId(''); setSelGradeSubjectId(''); setGradeSubjects([]); loadSemesters(g.id); }
   };
   const pickSem = (s: Semester) => {
-    if (selSemId === s.id) { setSelSemId(''); setSelGradeSubjectId(''); setSubjectLessons([]); setGradeSubjects([]); }
-    else { setSelSemId(s.id); setSelGradeSubjectId(''); setSubjectLessons([]); loadSubjects(selGradeId, s.id); }
+    if (selSemId === s.id) { setSelSemId(''); setSelGradeSubjectId(''); setGradeSubjects([]); }
+    else { setSelSemId(s.id); setSelGradeSubjectId(''); loadSubjects(selGradeId, s.id); }
   };
 
   const totalGrades = stages.reduce((a, s) => a + s.tracks.reduce((b, t) => b + t.grades.length, 0), 0);
@@ -481,54 +428,14 @@ function CurriculumPage({ notify }: { notify: (t: 'success' | 'error', m: string
                         </div>
                         <div className="tree-chips-row">
                           {gradeSubjects.map(sub => (
-                            <button
-                              key={sub.gradeSubjectId}
-                              className={`tree-chip tree-chip-subject ${selGradeSubjectId === sub.gradeSubjectId ? 'active' : ''}`}
-                              onClick={() => pickSubject(sub)}
-                            >
-                              📖 {sub.name}
-                              <span className="tree-chip-act danger" onClick={e => { e.stopPropagation(); handleDeleteSubject(sub); }}>
-                                <Trash2 size={10} />
-                              </span>
+                            <button key={sub.gradeSubjectId} className="tree-chip tree-chip-subject">
+                              {sub.name}
+                              <span className="tree-chip-act danger" onClick={e => { e.stopPropagation(); handleDeleteSubject(sub); }}><Trash2 size={10} /></span>
                             </button>
                           ))}
                           {gradeSubjects.length === 0 && !addingSubject && <span className="tree-chip-empty">لا توجد مواد — اضغط + للربط</span>}
                         </div>
                         {addingSubject && <AddSubjectDropdown onSave={handleAddSubject} onCancel={() => setAddingSubject(false)} />}
-
-                        {selGradeSubjectId && (
-                          <div className="tree-inline-section" style={{ marginTop: 12, background: 'rgba(2, 132, 199, 0.05)', padding: '12px 14px', borderRadius: 10, border: '1.5px solid #0284c7' }}>
-                            <div className="tree-inline-label" style={{ fontWeight: 900, color: '#0369a1', fontSize: 12 }}>
-                              <BookOpen size={14} /> دروس المادة: {gradeSubjects.find(s => s.gradeSubjectId === selGradeSubjectId)?.name}
-                              <button className="icon-btn" style={{ marginRight: 'auto' }} onClick={() => setAddingLesson(v => !v)} title="إضافة درس جديد للمادة">
-                                <Plus size={13} /> إضافة درس
-                              </button>
-                            </div>
-                            <div className="tree-chips-row" style={{ marginTop: 8 }}>
-                              {subjectLessons.map(les => (
-                                editingId === les.id && editType === 'lesson' ? (
-                                  <div key={les.id} style={{ width: '100%' }}>
-                                    <InlineEdit value={les.lessonTitle} onSave={v => handleEditLesson(les.id, v)} onCancel={() => setEditingId('')} />
-                                  </div>
-                                ) : (
-                                  <div key={les.id} className="tree-chip" style={{ background: '#ffffff', border: '1px solid #cbd5e1', fontWeight: 800, color: '#0f172a', padding: '6px 10px' }}>
-                                    <span>{les.lessonTitle}</span>
-                                    <span className="tree-chip-act" onClick={e => { e.stopPropagation(); setEditingId(les.id); setEditType('lesson'); }} title="تعديل عنوان الدرس">
-                                      <Pencil size={11} />
-                                    </span>
-                                    <span className="tree-chip-act danger" onClick={e => { e.stopPropagation(); handleDeleteLesson(les.id, les.lessonTitle); }} title="حذف الدرس">
-                                      <Trash2 size={11} />
-                                    </span>
-                                  </div>
-                                )
-                              ))}
-                              {subjectLessons.length === 0 && !addingLesson && (
-                                <span className="tree-chip-empty">لا توجد دروس مضافة لهذه المادة بعد — اضغط «+ إضافة درس» لإضافة دروس المادة</span>
-                              )}
-                            </div>
-                            {addingLesson && <AddRow placeholder="أدخل عنوان الدرس (مثال: مجال الرسم - الألوان ممتعة)" onSave={handleAddLesson} onCancel={() => setAddingLesson(false)} />}
-                          </div>
-                        )}
                       </div>
                     )}
                   </div>
@@ -1001,9 +908,7 @@ function SyllabusPage({ f, notify }: { f: FilterState; notify: (t: 'success' | '
 
     setPdfLoading(true);
     try {
-      const origin = typeof window !== 'undefined' ? window.location.origin : 'https://admin.wsyelhi.com';
-      let htmlContent = el.outerHTML;
-      htmlContent = htmlContent.replace(/src="\/([^"]+)"/g, `src="${origin}/$1"`);
+      const htmlContent = el.outerHTML;
       const pdfTitle = `توزيع ${subjectName} ${gradeName} ${stageName}`.replace(/\s+/g, ' ').trim();
 
       const pdfExportUrl = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
@@ -1554,28 +1459,28 @@ function SyllabusPage({ f, notify }: { f: FilterState; notify: (t: 'success' | '
                   gap: 6,
                   background: 'linear-gradient(to left, #f0fdf4, #f0f9ff, #fffbeb)',
                   border: '1.5px solid #0284c7',
-                  borderRadius: 10,
-                  padding: '6px 12px',
-                  marginBottom: 10,
+                  borderRadius: 8,
+                  padding: '4px 10px',
+                  marginBottom: 8,
                   textAlign: 'center',
                   boxShadow: '0 1px 4px rgba(2, 132, 199, 0.05)'
                 }}
               >
-                <div className="ps-info-item">
-                  <span className="ps-info-label" style={{ fontSize: 10, fontWeight: 700, color: '#0369a1' }}>📚 المادة:</span>
-                  <span className="ps-info-val" style={{ fontSize: 11.5, fontWeight: 900, color: '#0f172a', display: 'block', marginTop: 1 }}>{subjectName}</span>
+                <div className="ps-info-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                  <span className="ps-info-label" style={{ fontSize: 10.5, fontWeight: 800, color: '#0369a1', whiteSpace: 'nowrap' }}>📚 المادة:</span>
+                  <span className="ps-info-val" style={{ fontSize: 11.5, fontWeight: 900, color: '#0f172a', whiteSpace: 'nowrap' }}>{subjectName}</span>
                 </div>
-                <div className="ps-info-item" style={{ borderRight: '1px solid #cbd5e1' }}>
-                  <span className="ps-info-label" style={{ fontSize: 10, fontWeight: 700, color: '#0369a1' }}>🎓 الصف:</span>
-                  <span className="ps-info-val" style={{ fontSize: 11.5, fontWeight: 900, color: '#0f172a', display: 'block', marginTop: 1 }}>{gradeName}</span>
+                <div className="ps-info-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, borderRight: '1px solid #cbd5e1' }}>
+                  <span className="ps-info-label" style={{ fontSize: 10.5, fontWeight: 800, color: '#0369a1', whiteSpace: 'nowrap' }}>🎓 الصف:</span>
+                  <span className="ps-info-val" style={{ fontSize: 11.5, fontWeight: 900, color: '#0f172a', whiteSpace: 'nowrap' }}>{gradeName}</span>
                 </div>
-                <div className="ps-info-item" style={{ borderRight: '1px solid #cbd5e1' }}>
-                  <span className="ps-info-label" style={{ fontSize: 10, fontWeight: 700, color: '#0369a1' }}>🗓️ الفصل:</span>
-                  <span className="ps-info-val" style={{ fontSize: 11.5, fontWeight: 900, color: '#0f172a', display: 'block', marginTop: 1 }}>{semesterName}</span>
+                <div className="ps-info-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, borderRight: '1px solid #cbd5e1' }}>
+                  <span className="ps-info-label" style={{ fontSize: 10.5, fontWeight: 800, color: '#0369a1', whiteSpace: 'nowrap' }}>🗓️ الفصل:</span>
+                  <span className="ps-info-val" style={{ fontSize: 11.5, fontWeight: 900, color: '#0f172a', whiteSpace: 'nowrap' }}>{semesterName}</span>
                 </div>
-                <div className="ps-info-item" style={{ borderRight: '1px solid #cbd5e1' }}>
-                  <span className="ps-info-label" style={{ fontSize: 10, fontWeight: 700, color: '#0369a1' }}>⏳ العام:</span>
-                  <span className="ps-info-val" style={{ fontSize: 11.5, fontWeight: 900, color: '#0d9488', display: 'block', marginTop: 1 }}>1448 هـ (2026 - 2027 م)</span>
+                <div className="ps-info-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, borderRight: '1px solid #cbd5e1' }}>
+                  <span className="ps-info-label" style={{ fontSize: 10.5, fontWeight: 800, color: '#0369a1', whiteSpace: 'nowrap' }}>⏳ العام:</span>
+                  <span className="ps-info-val" style={{ fontSize: 11.5, fontWeight: 900, color: '#0d9488', whiteSpace: 'nowrap' }}>1448 هـ (2026 - 2027 م)</span>
                 </div>
               </div>
 
@@ -1727,31 +1632,31 @@ function SyllabusPage({ f, notify }: { f: FilterState; notify: (t: 'success' | '
               <div
                 className="ps-footer-table"
                 style={{
-                  marginTop: 8,
+                  marginTop: 6,
                   display: 'grid',
                   gridTemplateColumns: '1fr 1fr 1fr',
                   gap: 10,
-                  padding: '8px 12px',
+                  padding: '5px 12px',
                   background: '#f8fafc',
                   border: '1px solid #cbd5e1',
                   borderRadius: 8,
-                  fontSize: 10.5,
+                  fontSize: 10,
                   fontWeight: 800,
                   color: '#1e293b',
                   width: '100%'
                 }}
               >
-                <div style={{ borderLeft: '1px solid #e2e8f0', paddingLeft: 8 }}>
-                  <div style={{ color: '#64748b', fontSize: 9.5, fontWeight: 700 }}>المؤسسة التعليمية:</div>
-                  <div style={{ marginTop: 2, fontWeight: 900, color: '#0f766e', fontSize: 11 }}>{pdfSchoolName || '........................................'}</div>
+                <div style={{ borderLeft: '1px solid #e2e8f0', paddingLeft: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ color: '#64748b', fontSize: 9.5, fontWeight: 700, whiteSpace: 'nowrap' }}>المؤسسة التعليمية:</span>
+                  <span style={{ fontWeight: 900, color: '#0f766e', fontSize: 11, whiteSpace: 'nowrap' }}>{pdfSchoolName || '........................................'}</span>
                 </div>
-                <div style={{ borderLeft: '1px solid #e2e8f0', paddingLeft: 8 }}>
-                  <div style={{ color: '#64748b', fontSize: 9.5, fontWeight: 700 }}>توقيع معلم/ة المادة:</div>
-                  <div style={{ marginTop: 2, fontWeight: 900, color: '#0f766e', fontSize: 11 }}>{pdfTeacherName || '........................................'}</div>
+                <div style={{ borderLeft: '1px solid #e2e8f0', paddingLeft: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ color: '#64748b', fontSize: 9.5, fontWeight: 700, whiteSpace: 'nowrap' }}>توقيع معلم/ة المادة:</span>
+                  <span style={{ fontWeight: 900, color: '#0f766e', fontSize: 11, whiteSpace: 'nowrap' }}>{pdfTeacherName || '........................................'}</span>
                 </div>
-                <div>
-                  <div style={{ color: '#64748b', fontSize: 9.5, fontWeight: 700 }}>اعتماد مدير/ة المدرسة:</div>
-                  <div style={{ marginTop: 2, fontWeight: 900, color: '#0f766e', fontSize: 11 }}>{pdfPrincipalName || '........................................'}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ color: '#64748b', fontSize: 9.5, fontWeight: 700, whiteSpace: 'nowrap' }}>اعتماد مدير/ة المدرسة:</span>
+                  <span style={{ fontWeight: 900, color: '#0f766e', fontSize: 11, whiteSpace: 'nowrap' }}>{pdfPrincipalName || '........................................'}</span>
                 </div>
               </div>
 
@@ -1772,6 +1677,8 @@ function SyllabusPage({ f, notify }: { f: FilterState; notify: (t: 'success' | '
                   gap: 6
                 }}
               >
+                <span>🌐</span>
+                <span>تم الاعتماد والتوليد آلياً عبر نظام وسيلة المعتمَد — https://wsyelhi.com</span>
               </div>
             </div>
           </div>
@@ -1839,7 +1746,6 @@ function ActivitiesPage({ f, notify, theme: _theme }: { f: FilterState; notify: 
   const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
   const [viewingItem, setViewingItem] = useState<LessonActivityItem | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedLessonFilter, setSelectedLessonFilter] = useState('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   useEffect(() => {
@@ -1855,20 +1761,11 @@ function ActivitiesPage({ f, notify, theme: _theme }: { f: FilterState; notify: 
     finally { setLoading(false); }
   };
 
-  const availableLessons = useMemo(() => {
-    const set = new Set<string>();
-    (activities || []).forEach(a => {
-      const t = (a.lessonTitle || '').trim();
-      if (t) set.add(t);
-    });
-    return Array.from(set);
-  }, [activities]);
-
   const openNew = () => { setEditingActivity(null); setLessonTitle(''); setItems([]); setShowEditor(true); };
   const openEdit = (act: LessonActivity) => { setEditingActivity(act); setLessonTitle(act.lessonTitle); setItems(act.items || []); setShowEditor(true); };
 
   const handleSave = async () => {
-    if (!lessonTitle.trim()) { notify('error', 'أدخل أو اختر عنوان الدرس.'); return; }
+    if (!lessonTitle.trim()) { notify('error', 'أدخل عنوان الدرس.'); return; }
     try {
       await api.saveActivity({
         id: editingActivity?.id,
@@ -1965,9 +1862,6 @@ function ActivitiesPage({ f, notify, theme: _theme }: { f: FilterState; notify: 
 
   const filteredActivities = activities
     .filter(act => {
-      if (selectedLessonFilter && (act.lessonTitle || '').trim() !== selectedLessonFilter.trim()) {
-        return false;
-      }
       if (!searchQuery.trim()) return true;
       const q = searchQuery.toLowerCase().trim();
       const matchLesson = act.lessonTitle?.toLowerCase().includes(q);
@@ -2005,32 +1899,6 @@ function ActivitiesPage({ f, notify, theme: _theme }: { f: FilterState; notify: 
             <span className="badge">{filteredActivities.length} نشاط</span>
           </div>
           <div className="toolbar-right" style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-            {availableLessons.length > 0 && (
-              <div className="search-box" style={{ minWidth: 200 }}>
-                <span className="icon">📖</span>
-                <select
-                  value={selectedLessonFilter}
-                  onChange={e => setSelectedLessonFilter(e.target.value)}
-                  style={{
-                    border: 'none',
-                    background: 'transparent',
-                    color: 'var(--text-1)',
-                    fontWeight: 800,
-                    fontSize: 13,
-                    width: '100%',
-                    cursor: 'pointer',
-                    outline: 'none'
-                  }}
-                >
-                  <option value="">-- جميع الدروس ({availableLessons.length}) --</option>
-                  {availableLessons.map((lTitle: string, idx: number) => (
-                    <option key={idx} value={lTitle}>
-                      {lTitle}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
             <div className="search-box">
               <span className="icon">🔍</span>
               <input
@@ -2063,8 +1931,8 @@ function ActivitiesPage({ f, notify, theme: _theme }: { f: FilterState; notify: 
       ) : filteredActivities.length === 0 ? (
         <div className="empty-state glass">
           <Layers size={56} className="empty-icon" />
-          <h3>{selectedLessonFilter ? `لا توجد أنشطة مخصصة لدرس "${selectedLessonFilter}"` : searchQuery ? 'لا توجد نتائج مطابقة للبحث' : 'لا توجد أنشطة بعد'}</h3>
-          <p>{selectedLessonFilter ? 'اختر درساً آخر أو اضغط «إنشاء نشاط جديد» لإضافة أنشطة لهذا الدرس' : searchQuery ? 'جرب البحث بكلمات أخرى' : 'اضغط «نشاط جديد» لربط محتوى تفاعلي بالدروس'}</p>
+          <h3>{searchQuery ? 'لا توجد نتائج مطابقة للبحث' : 'لا توجد أنشطة بعد'}</h3>
+          <p>{searchQuery ? 'جرب البحث بكلمات أخرى' : 'اضغط «نشاط جديد» لربط محتوى تفاعلي بالدروس'}</p>
         </div>
       ) : (
         <div className="activity-cards">
