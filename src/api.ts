@@ -1,4 +1,9 @@
-const BASE_URL = import.meta.env.VITE_API_URL || 'https://api.wsyelhi.com/api';
+const getBaseUrl = () => {
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  return 'https://api.wsyelhi.com/api';
+};
+
+const BASE_URL = getBaseUrl();
 
 export function getToken() {
   return localStorage.getItem('admin_token');
@@ -42,8 +47,35 @@ async function request(path: string, options: RequestInit = {}) {
   return res.json();
 }
 
+export async function exportPdf(html: string, title: string) {
+  const token = getToken();
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const response = await fetch(`${BASE_URL}/syllabus-weeks/export-pdf`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ html, title }),
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error || 'فشل إنشاء PDF عبر الخادم');
+  }
+
+  const blob = await response.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${title || 'syllabus-distribution'}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  window.URL.revokeObjectURL(url);
+  document.body.removeChild(a);
+}
+
 export const api = {
-  async login(email: string, password: string) {
+  login: async (email: string, password: string) => {
     const data = await request('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
@@ -52,189 +84,57 @@ export const api = {
     return data.user;
   },
 
-  async getStages() {
-    return request('/stages');
+  getStages: async () => request('/stages'),
+  getGrades: async (trackId?: string, stageId?: string) => request(`/grades${trackId ? `?trackId=${trackId}` : stageId ? `?stageId=${stageId}` : ''}`),
+  createGrade: async (stageId?: string, trackId?: string, name?: string, order?: number) => request('/grades', { method: 'POST', body: JSON.stringify({ stageId, trackId, name, order }) }),
+  updateGrade: async (id: string, name: string, order: number) => request(`/grades/${id}`, { method: 'PUT', body: JSON.stringify({ name, order }) }),
+  deleteGrade: async (id: string) => request(`/grades/${id}`, { method: 'DELETE' }),
+  getSemesters: async (gradeId?: string) => request(`/semesters${gradeId ? `?gradeId=${gradeId}` : ''}`),
+  createSemester: async (gradeId: string, name: string, order: number) => request('/semesters', { method: 'POST', body: JSON.stringify({ gradeId, name, order }) }),
+  updateSemester: async (id: string, name: string) => request(`/semesters/${id}`, { method: 'PUT', body: JSON.stringify({ name }) }),
+  deleteSemester: async (id: string) => request(`/semesters/${id}`, { method: 'DELETE' }),
+  getSubjects: async (gradeId?: string, semesterId?: string) => {
+    try {
+      return await request(`/subjects?gradeId=${gradeId || ''}&semesterId=${semesterId || ''}`);
+    } catch {
+      return await request(`/grade-subjects?gradeId=${gradeId || ''}&semesterId=${semesterId || ''}`);
+    }
   },
-
-  async getSemesters(gradeId?: string) {
-    const q = gradeId ? `?gradeId=${gradeId}` : '';
-    return request(`/semesters${q}`);
-  },
-
-  async createSemester(gradeId: string, name: string, order?: number) {
-    return request('/semesters', { method: 'POST', body: JSON.stringify({ gradeId, name, order: order ?? 0 }) });
-  },
-
-  async updateSemester(id: string, name: string) {
-    return request(`/semesters/${id}`, { method: 'PUT', body: JSON.stringify({ name }) });
-  },
-
-  async deleteSemester(id: string) {
-    return request(`/semesters/${id}`, { method: 'DELETE' });
-  },
-
-  async createStage(name: string, order: number) {
-    return request('/stages', { method: 'POST', body: JSON.stringify({ name, order }) });
-  },
-
-  async updateStage(id: string, name: string, order: number) {
-    return request(`/stages/${id}`, { method: 'PUT', body: JSON.stringify({ name, order }) });
-  },
-
-  async deleteStage(id: string) {
-    return request(`/stages/${id}`, { method: 'DELETE' });
-  },
-
-  async createTrack(stageId: string, name: string, order: number) {
-    return request('/tracks', { method: 'POST', body: JSON.stringify({ stageId, name, order }) });
-  },
-
-  async updateTrack(id: string, name: string, order: number) {
-    return request(`/tracks/${id}`, { method: 'PUT', body: JSON.stringify({ name, order }) });
-  },
-
-  async deleteTrack(id: string) {
-    return request(`/tracks/${id}`, { method: 'DELETE' });
-  },
-
-  async createGrade(stageId: string | undefined, trackId: string | undefined, name: string, order: number) {
-    return request('/grades', { method: 'POST', body: JSON.stringify({ stageId, trackId, name, order }) });
-  },
-
-  async updateGrade(id: string, name: string, order: number) {
-    return request(`/grades/${id}`, { method: 'PUT', body: JSON.stringify({ name, order }) });
-  },
-
-  async deleteGrade(id: string) {
-    return request(`/grades/${id}`, { method: 'DELETE' });
-  },
-
-  async getGrades(stageId: string, trackId?: string) {
-    const query = trackId ? `?trackId=${trackId}` : '';
-    return request(`/grades/${stageId}${query}`);
-  },
-
-  async getSubjects(gradeId: string, semesterId: string) {
-    return request(`/subjects?gradeId=${gradeId}&semesterId=${semesterId}`);
-  },
-
-  async assignSubjectToGrade(gradeId: string, semesterId: string, subjectName: string) {
-    return request('/grade-subject/assign', {
-      method: 'POST',
-      body: JSON.stringify({ gradeId, semesterId, subjectName }),
-    });
-  },
-
-  async removeSubjectFromGrade(gradeSubjectId: string) {
-    return request(`/grade-subject/${gradeSubjectId}`, {
-      method: 'DELETE',
-    });
-  },
-
-  async getSyllabusWeeks(gradeSubjectId: string, region?: string) {
-    const qRegion = region ? `&region=${region}` : '';
-    return request(`/syllabus-weeks?gradeSubjectId=${gradeSubjectId}${qRegion}`);
-  },
-
-  async getCalendarDays(startDate: string, endDate: string, region: string) {
-    return request(`/calendar-days?startDate=${startDate}&endDate=${endDate}&region=${region}`);
-  },
-
-  async saveCalendarDay(payload: { date: string; dayName: string; type: string; region: string; note?: string }) {
-    return request('/calendar-days', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    });
-  },
-
-  async createSyllabusWeek(
-    gradeSubjectId: string,
-    weekNumber: number,
-    title: string,
-    options?: { startDateHijri?: string; endDateHijri?: string; weekType?: string; region?: string; days?: any }
-  ) {
+  assignSubjectToGrade: async (gradeId: string, semesterId: string, name: string) => request('/grade-subjects', { method: 'POST', body: JSON.stringify({ gradeId, semesterId, name }) }),
+  removeSubjectFromGrade: async (id: string) => request(`/grade-subjects/${id}`, { method: 'DELETE' }),
+  getSyllabusWeeks: async (gradeSubjectId: string, region?: string) => request(`/syllabus-weeks?gradeSubjectId=${gradeSubjectId}&region=${region || 'GENERAL'}`),
+  createSyllabusWeek: async (gradeSubjectIdOrPayload: any, weekNumber?: number, title?: string, options?: any) => {
+    if (typeof gradeSubjectIdOrPayload === 'object') {
+      return request('/syllabus-weeks', { method: 'POST', body: JSON.stringify(gradeSubjectIdOrPayload) });
+    }
     return request('/syllabus-weeks', {
       method: 'POST',
       body: JSON.stringify({
-        gradeSubjectId,
+        gradeSubjectId: gradeSubjectIdOrPayload,
         weekNumber,
         title,
-        startDateHijri: options?.startDateHijri || null,
-        endDateHijri: options?.endDateHijri || null,
-        weekType: options?.weekType || 'LESSON',
-        region: options?.region || 'GENERAL',
-        days: options?.days || null,
+        ...(options || {}),
       }),
     });
   },
-
-  async deleteSyllabusWeek(id: string) {
-    return request(`/syllabus-weeks/${id}`, {
-      method: 'DELETE',
-    });
-  },
-
-  async saveActivity(payload: {
-    id?: string;
-    gradeSubjectId: string;
-    syllabusWeekId?: string;
-    lessonTitle: string;
-    items: Array<{
-      type: string;
-      title: string;
-      url?: string;
-      filePath?: string;
-      thumbnailUrl?: string;
-    }>;
-  }) {
-    return request('/activities', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    });
-  },
-
-  async getActivities(gradeSubjectId: string) {
-    return request(`/activities?gradeSubjectId=${gradeSubjectId}`);
-  },
-
-  async deleteActivity(id: string) {
-    return request(`/activities/${id}`, {
-      method: 'DELETE',
-    });
-  },
-
-  async uploadFile(file: File) {
+  updateSyllabusWeek: async (id: string, payload: any) => request(`/syllabus-weeks/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  deleteSyllabusWeek: async (id: string) => request(`/syllabus-weeks/${id}`, { method: 'DELETE' }),
+  getCalendarDays: async (start: string, end: string, region?: string) => request(`/calendar-days?startDate=${start}&endDate=${end}&start=${start}&end=${end}&region=${region || 'GENERAL'}`),
+  getActivities: async (gradeSubjectId: string) => request(`/activities?gradeSubjectId=${gradeSubjectId}`),
+  createActivity: async (payload: any) => request('/activities', { method: 'POST', body: JSON.stringify(payload) }),
+  updateActivity: async (id: string, payload: any) => request(`/activities/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  deleteActivity: async (id: string) => request(`/activities/${id}`, { method: 'DELETE' }),
+  saveActivity: async (payload: any) => payload.id ? request(`/activities/${payload.id}`, { method: 'PUT', body: JSON.stringify(payload) }) : request('/activities', { method: 'POST', body: JSON.stringify(payload) }),
+  uploadFile: async (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
-    return request('/upload', {
-      method: 'POST',
-      body: formData,
-    });
+    return request('/upload', { method: 'POST', body: formData });
   },
-  async exportPdf(html: string, title: string) {
-    const token = getToken();
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-
-    const response = await fetch(`${BASE_URL}/syllabus-weeks/export-pdf`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ html, title }),
-    });
-
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(err.error || 'فشل إنشاء PDF عبر الخادم');
-    }
-
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${title || 'syllabus-distribution'}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(url);
-    document.body.removeChild(a);
-  },
+  createStage: async (name: string, order: number) => request('/stages', { method: 'POST', body: JSON.stringify({ name, order }) }),
+  updateStage: async (id: string, name: string, order: number) => request(`/stages/${id}`, { method: 'PUT', body: JSON.stringify({ name, order }) }),
+  deleteStage: async (id: string) => request(`/stages/${id}`, { method: 'DELETE' }),
+  createTrack: async (stageId: string, name: string, order: number) => request('/tracks', { method: 'POST', body: JSON.stringify({ stageId, name, order }) }),
+  updateTrack: async (id: string, name: string, order: number) => request(`/tracks/${id}`, { method: 'PUT', body: JSON.stringify({ name, order }) }),
+  deleteTrack: async (id: string) => request(`/tracks/${id}`, { method: 'DELETE' }),
+  exportPdf,
 };
