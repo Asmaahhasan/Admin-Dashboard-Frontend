@@ -1485,7 +1485,7 @@ function SyllabusPage({ f, notify }: { f: FilterState; notify: (t: 'success' | '
               </div>
 
               {/* Executive Matrix Weeks Grid - 6 columns stretch */}
-              <div className="ps-weeks-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6, marginBottom: 10, width: '100%' }}>
+              <div className="ps-weeks-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gridAutoRows: '1fr', gap: 6, marginBottom: 10, width: '100%', flex: 1, alignItems: 'stretch' }}>
                 {weeks.map((w) => {
                   const isHoliday = w.weekType === 'HOLIDAY' || (w.title.includes('إجازة') && !w.title.includes('اليوم الوطني'));
                   const isExam = w.weekType === 'EXAM' || w.title.includes('اختبار');
