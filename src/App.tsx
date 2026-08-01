@@ -1879,26 +1879,66 @@ function ActivitiesPage({ f, notify, theme: _theme }: { f: FilterState; notify: 
     return Array.from(set);
   }, [subjectLessons, activities]);
 
-  const openNew = () => { setEditingActivity(null); setLessonTitle(''); setItems([]); setShowEditor(true); };
-  const openEdit = (act: LessonActivity) => { setEditingActivity(act); setLessonTitle(act.lessonTitle); setItems(act.items || []); setShowEditor(true); };
+  const [editingItemIdx, setEditingItemIdx] = useState<number | null>(null);
+
+  const openNew = () => {
+    setEditingActivity(null);
+    setEditingItemIdx(null);
+    setLessonTitle('');
+    setItems([{ type: 'GAME', title: '', url: '' }]);
+    setShowEditor(true);
+  };
+
+  const openEditSingle = (act: LessonActivity, itemIdx: number) => {
+    setEditingActivity(act);
+    setEditingItemIdx(itemIdx);
+    setLessonTitle(act.lessonTitle || '');
+    if (act.items && act.items[itemIdx]) {
+      setItems([{ ...act.items[itemIdx] }]);
+    } else {
+      setItems([{ type: 'GAME', title: '', url: '' }]);
+    }
+    setShowEditor(true);
+  };
 
   const handleSave = async () => {
     if (!lessonTitle.trim()) { notify('error', 'أدخل عنوان الدرس.'); return; }
+    if (items.length === 0) { notify('error', 'أضف نشاطاً واحداً على الأقل.'); return; }
     try {
-      await api.saveActivity({
-        id: editingActivity?.id,
-        gradeSubjectId: f.gradeSubjectId,
-        lessonTitle: lessonTitle.trim(),
-        items: items.map(i => ({
+      let finalItems: LessonActivityItem[];
+
+      if (editingActivity && editingItemIdx !== null && editingActivity.items) {
+        finalItems = [...editingActivity.items];
+        finalItems[editingItemIdx] = {
+          type: items[0].type,
+          title: items[0].title || 'نشاط',
+          url: getActivityUrl(items[0].url || ''),
+          filePath: items[0].filePath,
+          thumbnailUrl: items[0].thumbnailUrl,
+        };
+      } else {
+        finalItems = items.map(i => ({
           type: i.type,
           title: i.title || 'نشاط',
           url: getActivityUrl(i.url || ''),
           filePath: i.filePath,
-          thumbnailUrl: i.thumbnailUrl
-        }))
+          thumbnailUrl: i.thumbnailUrl,
+        }));
+      }
+
+      await api.saveActivity({
+        id: editingActivity?.id,
+        gradeSubjectId: f.gradeSubjectId,
+        lessonTitle: lessonTitle.trim(),
+        items: finalItems,
       });
-      notify('success', 'تم الحفظ بنجاح.'); setShowEditor(false); loadActivities();
-    } catch (e: any) { notify('error', e.message || 'فشل الحفظ.'); }
+
+      notify('success', 'تم الحفظ بنجاح.');
+      setShowEditor(false);
+      loadActivities();
+    } catch (e: any) {
+      notify('error', e.message || 'فشل الحفظ.');
+    }
   };
 
   const handleDeleteCardItem = async (act: LessonActivity, itemIdx: number) => {
@@ -2205,7 +2245,7 @@ function ActivitiesPage({ f, notify, theme: _theme }: { f: FilterState; notify: 
                 </div>
                 <div className="ac-divider" />
                 <div className="ac-actions">
-                  <button className="btn-ghost sm" onClick={() => openEdit(activity)}><Pencil size={14} /> تعديل</button>
+                  <button className="btn-ghost sm" onClick={() => openEditSingle(activity, itemIndex)}><Pencil size={14} /> تعديل</button>
                   <button className="btn-ghost sm" onClick={() => handleDeleteCardItem(activity, itemIndex)} style={{ color: 'var(--danger)' }}><Trash2 size={14} /> حذف</button>
                 </div>
               </div>
