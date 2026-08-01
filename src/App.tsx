@@ -182,11 +182,13 @@ function CurriculumPage({ notify }: { notify: (t: 'success' | 'error', m: string
   const [semesters, setSemesters] = useState<Semester[]>([]);
   const [gradeSubjects, setGradeSubjects] = useState<SubjectOption[]>([]);
   const [selGradeSubjectId, setSelGradeSubjectId] = useState('');
+  const [subjectLessons, setSubjectLessons] = useState<any[]>([]);
   const [addingStage, setAddingStage] = useState(false);
   const [addingTrack, setAddingTrack] = useState(false);
   const [addingGrade, setAddingGrade] = useState(false);
   const [addingSem, setAddingSem] = useState(false);
   const [addingSubject, setAddingSubject] = useState(false);
+  const [addingLesson, setAddingLesson] = useState(false);
   const [editingId, setEditingId] = useState('');
   const [editType, setEditType] = useState('');
   const [confirmData, setConfirmData] = useState<{ message: string; onConfirm: () => void } | null>(null);
@@ -205,6 +207,55 @@ function CurriculumPage({ notify }: { notify: (t: 'success' | 'error', m: string
     try { const s = await api.getSubjects(gId, sId); setGradeSubjects(s); }
     catch { notify('error', 'فشل تحميل المواد.'); }
   };
+  const loadSubjectLessons = async (gsId: string) => {
+    try {
+      const les = await api.getSubjectLessons(gsId);
+      setSubjectLessons(les);
+    } catch {
+      notify('error', 'فشل تحميل دروس المادة.');
+    }
+  };
+
+  const pickSubject = (sub: SubjectOption) => {
+    if (selGradeSubjectId === sub.gradeSubjectId) {
+      setSelGradeSubjectId('');
+      setSubjectLessons([]);
+    } else {
+      setSelGradeSubjectId(sub.gradeSubjectId);
+      loadSubjectLessons(sub.gradeSubjectId);
+    }
+  };
+
+  const handleAddLesson = async (title: string) => {
+    if (!selGradeSubjectId) return;
+    try {
+      await api.createSubjectLesson(selGradeSubjectId, title);
+      setAddingLesson(false);
+      await loadSubjectLessons(selGradeSubjectId);
+      notify('success', 'تمت إضافة الدرس بنجاح.');
+    } catch (e: any) {
+      notify('error', e.message || 'فشل إضافة الدرس.');
+    }
+  };
+
+  const handleEditLesson = async (id: string, newTitle: string) => {
+    try {
+      await api.updateSubjectLesson(id, newTitle);
+      setEditingId('');
+      await loadSubjectLessons(selGradeSubjectId);
+      notify('success', 'تم تعديل عنوان الدرس.');
+    } catch (e: any) {
+      notify('error', e.message || 'فشل تعديل الدرس.');
+    }
+  };
+
+  const handleDeleteLesson = (les: any) => confirmDelete(
+    `سيتم حذف درس "${les.lessonTitle}" والأنشطة المرتبطة به.`,
+    async () => {
+      await api.deleteSubjectLesson(les.id);
+      await loadSubjectLessons(selGradeSubjectId);
+    }
+  );
 
   const selStage = stages.find(s => s.id === selStageId);
   const noTracks = selStage ? stageHasNoTracks(selStage) : true;
@@ -290,6 +341,16 @@ function CurriculumPage({ notify }: { notify: (t: 'success' | 'error', m: string
     if (!selGradeId || !selSemId) return;
     try { await api.assignSubjectToGrade(selGradeId, selSemId, name); setAddingSubject(false); await loadSubjects(selGradeId, selSemId); notify('success', 'تمت الإضافة.'); }
     catch (e: any) { notify('error', e.message); }
+  };
+  const handleEditSubject = async (gradeSubjectId: string, _subjectId: string, newName: string) => {
+    try {
+      await api.updateGradeSubject(gradeSubjectId, newName);
+      setEditingId('');
+      await loadSubjects(selGradeId, selSemId);
+      notify('success', 'تم تعديل اسم المادة.');
+    } catch (e: any) {
+      notify('error', e.message || 'فشل تعديل اسم المادة.');
+    }
   };
   const handleDeleteSubject = (sub: SubjectOption) => confirmDelete(
     `سيتم حذف مادة "${sub.name}" من هذا الفصل مع جميع أسابيع المنهج والأنشطة المرتبطة.`,
@@ -428,14 +489,42 @@ function CurriculumPage({ notify }: { notify: (t: 'success' | 'error', m: string
                         </div>
                         <div className="tree-chips-row">
                           {gradeSubjects.map(sub => (
-                            <button key={sub.gradeSubjectId} className="tree-chip tree-chip-subject">
-                              {sub.name}
-                              <span className="tree-chip-act danger" onClick={e => { e.stopPropagation(); handleDeleteSubject(sub); }}><Trash2 size={10} /></span>
-                            </button>
+                            editingId === sub.gradeSubjectId && editType === 'subject'
+                              ? <div key={sub.gradeSubjectId} style={{ width: '100%' }}><InlineEdit value={sub.name} onSave={v => handleEditSubject(sub.gradeSubjectId, sub.subjectId, v)} onCancel={() => setEditingId('')} /></div>
+                              : (
+                                <button key={sub.gradeSubjectId} className={`tree-chip tree-chip-subject ${selGradeSubjectId === sub.gradeSubjectId ? 'active' : ''}`} onClick={() => pickSubject(sub)}>
+                                  {sub.name}
+                                  <span className="tree-chip-act" onClick={e => { e.stopPropagation(); setEditingId(sub.gradeSubjectId); setEditType('subject'); }}><Pencil size={10} /></span>
+                                  <span className="tree-chip-act danger" onClick={e => { e.stopPropagation(); handleDeleteSubject(sub); }}><Trash2 size={10} /></span>
+                                </button>
+                              )
                           ))}
                           {gradeSubjects.length === 0 && !addingSubject && <span className="tree-chip-empty">لا توجد مواد — اضغط + للربط</span>}
                         </div>
                         {addingSubject && <AddSubjectDropdown onSave={handleAddSubject} onCancel={() => setAddingSubject(false)} />}
+                      </div>
+                    )}
+                    {selGradeSubjectId && (
+                      <div className="tree-inline-section" style={{ background: 'rgba(2, 132, 199, 0.06)', padding: '12px 14px', borderRadius: 12, border: '1.5px solid var(--primary)' }}>
+                        <div className="tree-inline-label" style={{ color: 'var(--primary)', fontWeight: 800, fontSize: 13 }}>
+                          <_BookOpen size={15} /> دروس مادة: {gradeSubjects.find(s => s.gradeSubjectId === selGradeSubjectId)?.name}
+                          <button className="icon-btn" style={{ marginRight: 'auto' }} onClick={() => setAddingLesson(v => !v)} title="إضافة درس جديد للمادة"><Plus size={12} /></button>
+                        </div>
+                        <div className="tree-chips-row" style={{ marginTop: 6 }}>
+                          {subjectLessons.map(les => (
+                            editingId === les.id && editType === 'lesson'
+                              ? <div key={les.id} style={{ width: '100%' }}><InlineEdit value={les.lessonTitle} onSave={v => handleEditLesson(les.id, v)} onCancel={() => setEditingId('')} /></div>
+                              : (
+                                <button key={les.id} className="tree-chip" style={{ background: 'var(--surface)', border: '1.5px solid var(--primary-dim)', color: 'var(--text)', fontWeight: 700 }}>
+                                  📖 {les.lessonTitle}
+                                  <span className="tree-chip-act" onClick={e => { e.stopPropagation(); setEditingId(les.id); setEditType('lesson'); }}><Pencil size={10} /></span>
+                                  <span className="tree-chip-act danger" onClick={e => { e.stopPropagation(); handleDeleteLesson(les); }}><Trash2 size={10} /></span>
+                                </button>
+                              )
+                          ))}
+                          {subjectLessons.length === 0 && !addingLesson && <span className="tree-chip-empty">لا توجد دروس مضافة لهذه المادة — اضغط + لإضافة درس</span>}
+                        </div>
+                        {addingLesson && <AddRow placeholder="اسم الدرس الجديد (مثال: الدرس الأول - الألوان ممتعة)..." onSave={handleAddLesson} onCancel={() => setAddingLesson(false)} />}
                       </div>
                     )}
                   </div>
@@ -1738,6 +1827,8 @@ const extractVideoThumbnail = (file: File): Promise<Blob> => {
 // ── Activities Page ──
 function ActivitiesPage({ f, notify, theme: _theme }: { f: FilterState; notify: (t: 'success' | 'error', m: string) => void; theme?: Theme }) {
   const [activities, setActivities] = useState<LessonActivity[]>([]);
+  const [subjectLessons, setSubjectLessons] = useState<string[]>([]);
+  const [selectedLessonFilter, setSelectedLessonFilter] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
   const [editingActivity, setEditingActivity] = useState<LessonActivity | null>(null);
@@ -1749,8 +1840,16 @@ function ActivitiesPage({ f, notify, theme: _theme }: { f: FilterState; notify: 
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   useEffect(() => {
-    if (f.gradeSubjectId) { setLoading(true); loadActivities(); }
-    else setActivities([]);
+    if (f.gradeSubjectId) {
+      setLoading(true);
+      setSelectedLessonFilter('');
+      loadActivities();
+      loadSubjectLessons();
+    } else {
+      setActivities([]);
+      setSubjectLessons([]);
+      setSelectedLessonFilter('');
+    }
   }, [f.gradeSubjectId]);
 
   const loadActivities = async () => {
@@ -1760,6 +1859,25 @@ function ActivitiesPage({ f, notify, theme: _theme }: { f: FilterState; notify: 
     } catch { notify('error', 'فشل تحميل الأنشطة.'); }
     finally { setLoading(false); }
   };
+
+  const loadSubjectLessons = async () => {
+    if (!f.gradeSubjectId) return;
+    try {
+      const lessons: any[] = await api.getSubjectLessons(f.gradeSubjectId);
+      const titles = (lessons || []).map(l => (l.lessonTitle || '').trim()).filter(Boolean);
+      setSubjectLessons(Array.from(new Set(titles)));
+    } catch {
+      setSubjectLessons([]);
+    }
+  };
+
+  const allCombinedLessons = React.useMemo(() => {
+    const set = new Set<string>(subjectLessons);
+    activities.forEach(a => {
+      if (a.lessonTitle && a.lessonTitle.trim()) set.add(a.lessonTitle.trim());
+    });
+    return Array.from(set);
+  }, [subjectLessons, activities]);
 
   const openNew = () => { setEditingActivity(null); setLessonTitle(''); setItems([]); setShowEditor(true); };
   const openEdit = (act: LessonActivity) => { setEditingActivity(act); setLessonTitle(act.lessonTitle); setItems(act.items || []); setShowEditor(true); };
@@ -1862,6 +1980,9 @@ function ActivitiesPage({ f, notify, theme: _theme }: { f: FilterState; notify: 
 
   const filteredActivities = activities
     .filter(act => {
+      if (selectedLessonFilter && act.lessonTitle?.trim() !== selectedLessonFilter.trim()) {
+        return false;
+      }
       if (!searchQuery.trim()) return true;
       const q = searchQuery.toLowerCase().trim();
       const matchLesson = act.lessonTitle?.toLowerCase().includes(q);
@@ -1892,13 +2013,55 @@ function ActivitiesPage({ f, notify, theme: _theme }: { f: FilterState; notify: 
         </div>
       </div>
 
-      {f.gradeSubjectId && activities.length > 0 && (
-        <div className="activities-toolbar">
-          <div className="toolbar-left">
+      {f.gradeSubjectId && (activities.length > 0 || allCombinedLessons.length > 0) && (
+        <div className="activities-toolbar" style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="toolbar-left" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <h3>الأنشطة</h3>
             <span className="badge">{filteredActivities.length} نشاط</span>
           </div>
-          <div className="toolbar-right" style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+
+          <div className="toolbar-right" style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+            {/* Filter by Lesson Dropdown */}
+            {allCombinedLessons.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)', whiteSpace: 'nowrap' }}>
+                  <BookMarked size={14} style={{ display: 'inline', verticalAlign: 'middle', marginLeft: 4 }} />
+                  عرض أنشطة درس:
+                </span>
+                <select
+                  value={selectedLessonFilter}
+                  onChange={e => setSelectedLessonFilter(e.target.value)}
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: 10,
+                    border: selectedLessonFilter ? '2px solid var(--primary)' : '1.5px solid var(--border)',
+                    background: selectedLessonFilter ? 'var(--primary-dim)' : 'var(--bg2)',
+                    color: 'var(--text)',
+                    fontWeight: 700,
+                    fontSize: 13,
+                    cursor: 'pointer',
+                    outline: 'none',
+                    maxWidth: 240
+                  }}
+                >
+                  <option value="">-- جميع دروس المادة ({allCombinedLessons.length}) --</option>
+                  {allCombinedLessons.map((lTitle, idx) => (
+                    <option key={idx} value={lTitle}>{lTitle}</option>
+                  ))}
+                </select>
+                {selectedLessonFilter && (
+                  <button
+                    className="btn-ghost sm"
+                    onClick={() => setSelectedLessonFilter('')}
+                    style={{ fontSize: 11, padding: '4px 8px' }}
+                    title="إلغاء تصفية الدرس"
+                  >
+                    إلغاء التصفية <X size={12} />
+                  </button>
+                )}
+              </div>
+            )}
+
             <div className="search-box">
               <span className="icon">🔍</span>
               <input
@@ -1931,8 +2094,8 @@ function ActivitiesPage({ f, notify, theme: _theme }: { f: FilterState; notify: 
       ) : filteredActivities.length === 0 ? (
         <div className="empty-state glass">
           <Layers size={56} className="empty-icon" />
-          <h3>{searchQuery ? 'لا توجد نتائج مطابقة للبحث' : 'لا توجد أنشطة بعد'}</h3>
-          <p>{searchQuery ? 'جرب البحث بكلمات أخرى' : 'اضغط «نشاط جديد» لربط محتوى تفاعلي بالدروس'}</p>
+          <h3>{selectedLessonFilter ? `لا توجد أنشطة مضافة لدرس "${selectedLessonFilter}"` : searchQuery ? 'لا توجد نتائج مطابقة للبحث' : 'لا توجد أنشطة بعد'}</h3>
+          <p>{selectedLessonFilter ? 'اضغط «إنشاء نشاط جديد» لإضافة نشاط لهذا الدرس' : searchQuery ? 'جرب البحث بكلمات أخرى' : 'اضغط «نشاط جديد» لربط محتوى تفاعلي بالدروس'}</p>
         </div>
       ) : (
         <div className="activity-cards">
@@ -2003,19 +2166,25 @@ function ActivitiesPage({ f, notify, theme: _theme }: { f: FilterState; notify: 
             </div>
             <div className="modal-body">
               <div className="field">
-                <label>اختيار عنوان الدرس (من المنهج الدراسي للمقرر بدلاً من الكتابة العشوائية)</label>
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <label style={{ fontSize: 13, fontWeight: 700, marginBottom: 6, display: 'block' }}>
+                  اختر الدرس المراد إضافة الأنشطة له (المضاف في الهيكل الدراسي للمادة):
+                </label>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   <select
-                    value={activities.some(a => (a.lessonTitle || '').trim() === lessonTitle.trim()) ? lessonTitle : ''}
+                    value={allCombinedLessons.includes(lessonTitle.trim()) ? lessonTitle.trim() : ''}
                     onChange={e => {
                       if (e.target.value) setLessonTitle(e.target.value);
                     }}
-                    style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)' }}
+                    style={{
+                      flex: 1, minWidth: 220, padding: '10px 12px', borderRadius: '8px',
+                      border: '1.5px solid var(--primary)', background: 'var(--bg2)',
+                      color: 'var(--text)', fontFamily: 'Cairo', fontWeight: 600, fontSize: 13, outline: 'none'
+                    }}
                   >
-                    <option value="">-- اختر درساً من قائمة المقرر --</option>
-                    {activities.map((a, idx) => (
-                      <option key={a.id || idx} value={a.lessonTitle}>
-                        {a.lessonTitle}
+                    <option value="">-- اختر درساً من قائمة دروس المقرّر --</option>
+                    {allCombinedLessons.map((lTitle, idx) => (
+                      <option key={idx} value={lTitle}>
+                        {lTitle}
                       </option>
                     ))}
                   </select>
@@ -2024,7 +2193,11 @@ function ActivitiesPage({ f, notify, theme: _theme }: { f: FilterState; notify: 
                     placeholder="أو اكتب عنوان درس مخصص هنا..."
                     value={lessonTitle}
                     onChange={e => setLessonTitle(e.target.value)}
-                    style={{ flex: 1 }}
+                    style={{
+                      flex: 1, minWidth: 200, padding: '9px 12px', borderRadius: '8px',
+                      border: '1.5px solid var(--border)', background: 'var(--bg2)',
+                      color: 'var(--text)', fontFamily: 'Cairo', fontSize: 13, outline: 'none'
+                    }}
                   />
                 </div>
               </div>
@@ -2260,10 +2433,10 @@ export default function App() {
           <button className={`nav-tab ${activePage === 'curriculum' ? 'active' : ''}`} onClick={() => setActivePage('curriculum')}>
             <Settings size={16} /> الهيكل الدراسي
           </button>
-          <button className={`nav-tab ${activePage === 'syllabus' ? 'active' : ''}`} onClick={() => setActivePage('syllabus')}>
+          <button className={`nav-tab ${activePage === 'syllabus' ? 'active' : ''}`} onClick={() => { reloadSubjects(); setActivePage('syllabus'); }}>
             <CalendarDays size={16} /> توزيع المنهج
           </button>
-          <button className={`nav-tab ${activePage === 'activities' ? 'active' : ''}`} onClick={() => setActivePage('activities')}>
+          <button className={`nav-tab ${activePage === 'activities' ? 'active' : ''}`} onClick={() => { reloadSubjects(); setActivePage('activities'); }}>
             <Layers size={16} /> الأنشطة
           </button>
         </nav>

@@ -101,7 +101,13 @@ export const api = {
     }
   },
   assignSubjectToGrade: async (gradeId: string, semesterId: string, name: string) => request('/grade-subjects', { method: 'POST', body: JSON.stringify({ gradeId, semesterId, name }) }),
+  updateSubject: async (id: string, name: string) => request(`/subjects/${id}`, { method: 'PUT', body: JSON.stringify({ name }) }),
+  updateGradeSubject: async (id: string, name: string) => request(`/grade-subjects/${id}`, { method: 'PUT', body: JSON.stringify({ name }) }),
   removeSubjectFromGrade: async (id: string) => request(`/grade-subjects/${id}`, { method: 'DELETE' }),
+  getSubjectLessons: async (gradeSubjectId: string) => request(`/subject-lessons?gradeSubjectId=${gradeSubjectId}`),
+  createSubjectLesson: async (gradeSubjectId: string, lessonTitle: string) => request('/subject-lessons', { method: 'POST', body: JSON.stringify({ gradeSubjectId, lessonTitle }) }),
+  updateSubjectLesson: async (id: string, lessonTitle: string) => request(`/subject-lessons/${id}`, { method: 'PUT', body: JSON.stringify({ lessonTitle }) }),
+  deleteSubjectLesson: async (id: string) => request(`/subject-lessons/${id}`, { method: 'DELETE' }),
   getSyllabusWeeks: async (gradeSubjectId: string, region?: string) => request(`/syllabus-weeks?gradeSubjectId=${gradeSubjectId}&region=${region || 'GENERAL'}`),
   createSyllabusWeek: async (gradeSubjectIdOrPayload: any, weekNumber?: number, title?: string, options?: any) => {
     if (typeof gradeSubjectIdOrPayload === 'object') {
