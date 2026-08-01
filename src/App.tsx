@@ -1901,10 +1901,25 @@ function ActivitiesPage({ f, notify, theme: _theme }: { f: FilterState; notify: 
     } catch (e: any) { notify('error', e.message || 'فشل الحفظ.'); }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('حذف النشاط؟')) return;
-    try { await api.deleteActivity(id); notify('success', 'تم الحذف.'); loadActivities(); }
-    catch { notify('error', 'فشل الحذف.'); }
+  const handleDeleteCardItem = async (act: LessonActivity, itemIdx: number) => {
+    if (!confirm('حذف هذا النشاط؟')) return;
+    try {
+      const remainingItems = (act.items || []).filter((_, idx) => idx !== itemIdx);
+      if (remainingItems.length === 0) {
+        await api.deleteActivity(act.id);
+      } else {
+        await api.saveActivity({
+          id: act.id,
+          gradeSubjectId: act.gradeSubjectId,
+          lessonTitle: act.lessonTitle,
+          items: remainingItems,
+        });
+      }
+      notify('success', 'تم الحذف.');
+      loadActivities();
+    } catch {
+      notify('error', 'فشل الحذف.');
+    }
   };
 
   const addItem = () => setItems(p => [...p, { type: 'GAME', title: '', url: '' }]);
@@ -1997,6 +2012,30 @@ function ActivitiesPage({ f, notify, theme: _theme }: { f: FilterState; notify: 
         : titleB.localeCompare(titleA, 'ar');
     });
 
+  const activityItemCards = React.useMemo(() => {
+    const cards: Array<{
+      cardId: string;
+      activity: LessonActivity;
+      item: LessonActivityItem;
+      itemIndex: number;
+    }> = [];
+
+    filteredActivities.forEach(act => {
+      if (act.items && Array.isArray(act.items) && act.items.length > 0) {
+        act.items.forEach((item, itemIndex) => {
+          cards.push({
+            cardId: `${act.id}-item-${itemIndex}`,
+            activity: act,
+            item,
+            itemIndex,
+          });
+        });
+      }
+    });
+
+    return cards;
+  }, [filteredActivities]);
+
   return (
     <div className="page">
       <div className="page-header" style={{ marginBottom: 16 }}>
@@ -2017,7 +2056,7 @@ function ActivitiesPage({ f, notify, theme: _theme }: { f: FilterState; notify: 
         <div className="activities-toolbar" style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between', alignItems: 'center' }}>
           <div className="toolbar-left" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <h3>الأنشطة</h3>
-            <span className="badge">{filteredActivities.length} نشاط</span>
+            <span className="badge">{activityItemCards.length} نشاط</span>
           </div>
 
           <div className="toolbar-right" style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -2072,12 +2111,39 @@ function ActivitiesPage({ f, notify, theme: _theme }: { f: FilterState; notify: 
               />
             </div>
             <button
-              className="btn-secondary sm"
+              type="button"
               onClick={() => setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'))}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
-              title="تغيير اتجاه الترتيب"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '8px 16px',
+                borderRadius: 12,
+                border: '1.5px solid var(--primary)',
+                background: 'var(--surface)',
+                color: 'var(--primary)',
+                fontFamily: 'Cairo',
+                fontWeight: 700,
+                fontSize: 13,
+                cursor: 'pointer',
+                outline: 'none',
+                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                boxShadow: '0 2px 8px rgba(108, 99, 255, 0.12)',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = 'var(--primary)';
+                e.currentTarget.style.color = '#ffffff';
+                e.currentTarget.style.boxShadow = '0 4px 14px rgba(108, 99, 255, 0.35)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = 'var(--surface)';
+                e.currentTarget.style.color = 'var(--primary)';
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(108, 99, 255, 0.12)';
+              }}
+              title="اضغط لتغيير اتجاه الترتيب"
             >
-              <ArrowUpDown size={14} /> الترتيب: {sortOrder === 'asc' ? 'أبجدي (أ - ي)' : 'تنازلي (ي - أ)'}
+              <ArrowUpDown size={15} />
+              <span>الترتيب: {sortOrder === 'asc' ? 'أبجدي (أ - ي)' : 'تنازلي (ي - أ)'}</span>
             </button>
           </div>
         </div>
@@ -2091,7 +2157,7 @@ function ActivitiesPage({ f, notify, theme: _theme }: { f: FilterState; notify: 
         </div>
       ) : loading ? (
         <div className="loading-state"><span className="spin large" /></div>
-      ) : filteredActivities.length === 0 ? (
+      ) : activityItemCards.length === 0 ? (
         <div className="empty-state glass">
           <Layers size={56} className="empty-icon" />
           <h3>{selectedLessonFilter ? `لا توجد أنشطة مضافة لدرس "${selectedLessonFilter}"` : searchQuery ? 'لا توجد نتائج مطابقة للبحث' : 'لا توجد أنشطة بعد'}</h3>
@@ -2099,13 +2165,11 @@ function ActivitiesPage({ f, notify, theme: _theme }: { f: FilterState; notify: 
         </div>
       ) : (
         <div className="activity-cards">
-          {filteredActivities.map(act => {
-            const mainType = act.items.length > 0 ? act.items[0].type : 'UNKNOWN';
-            const coverItem = act.items.find(it => !!it.thumbnailUrl) || (act.items.length > 0 ? act.items[0] : null);
-            const hasCover = coverItem?.thumbnailUrl;
+          {activityItemCards.map(({ cardId, activity, item, itemIndex }) => {
+            const hasCover = item.thumbnailUrl;
             return (
-              <div key={act.id} className={`activity-card-v2 ${typeClass(mainType)}`}>
-                <div className="ac-content" onClick={() => act.items.length > 0 && setViewingItem(act.items[0])}>
+              <div key={cardId} className={`activity-card-v2 ${typeClass(item.type)}`}>
+                <div className="ac-content" onClick={() => setViewingItem(item)}>
                   {hasCover ? (
                     <div className="ac-cover">
                       <img
@@ -2114,39 +2178,35 @@ function ActivitiesPage({ f, notify, theme: _theme }: { f: FilterState; notify: 
                         style={{ width: '100%', height: '140px', objectFit: 'cover', display: 'block' }}
                         onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
                       />
-                      <div className="ac-cover-badge" style={{ color: typeColor(mainType) }}>
-                        {typeIcon(mainType)}
+                      <div className="ac-cover-badge" style={{ color: typeColor(item.type) }}>
+                        {typeIcon(item.type)}
                       </div>
                     </div>
                   ) : (
                     <div className="ac-cover ac-cover-placeholder" style={{ background: 'transparent' }}>
-                      {typeIconLg(mainType)}
+                      {typeIconLg(item.type)}
                     </div>
                   )}
                   <div className="ac-info">
                     <div className="ac-meta">
                       <span className="ac-meta-label">الدرس:</span>
-                      <span className="ac-meta-value">{act.lessonTitle}</span>
+                      <span className="ac-meta-value">{activity.lessonTitle}</span>
                     </div>
-                    {act.items[0]?.title && (
-                      <div className="ac-meta">
-                        <span className="ac-meta-label">النشاط:</span>
-                        <span className="ac-meta-value">{act.items[0].title}</span>
-                      </div>
-                    )}
+                    <div className="ac-meta">
+                      <span className="ac-meta-label">النشاط:</span>
+                      <span className="ac-meta-value">{item.title || 'نشاط بدون عنوان'}</span>
+                    </div>
                     <div className="ac-tags">
-                      {act.items.map((it, i) => (
-                        <span key={i} className="ac-tag" onClick={(e) => { e.stopPropagation(); setViewingItem(it); }} title="انقر للعرض">
-                          {typeIcon(it.type)} {typeLabel(it.type)}
-                        </span>
-                      ))}
+                      <span className="ac-tag" style={{ background: typeColor(item.type) + '18', color: typeColor(item.type), borderColor: typeColor(item.type) + '40' }}>
+                        {typeIcon(item.type)} {typeLabel(item.type)}
+                      </span>
                     </div>
                   </div>
                 </div>
                 <div className="ac-divider" />
                 <div className="ac-actions">
-                  <button className="btn-ghost sm" onClick={() => openEdit(act)}><Pencil size={14} /> تعديل</button>
-                  <button className="btn-ghost sm" onClick={() => handleDelete(act.id)} style={{ color: 'var(--danger)' }}><Trash2 size={14} /> حذف</button>
+                  <button className="btn-ghost sm" onClick={() => openEdit(activity)}><Pencil size={14} /> تعديل</button>
+                  <button className="btn-ghost sm" onClick={() => handleDeleteCardItem(activity, itemIndex)} style={{ color: 'var(--danger)' }}><Trash2 size={14} /> حذف</button>
                 </div>
               </div>
             );
