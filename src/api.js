@@ -92,16 +92,29 @@ export const api = {
     async getSubjects(gradeId, semesterId) {
         return request(`/subjects?gradeId=${gradeId}&semesterId=${semesterId}`);
     },
-    async assignSubjectToGrade(gradeId, semesterId, subjectName) {
-        return request('/grade-subject/assign', {
-            method: 'POST',
-            body: JSON.stringify({ gradeId, semesterId, subjectName }),
-        });
+    async assignSubjectToGrade(gradeId, semesterId, name) {
+        return request('/grade-subjects', { method: 'POST', body: JSON.stringify({ gradeId, semesterId, name }) });
     },
-    async removeSubjectFromGrade(gradeSubjectId) {
-        return request(`/grade-subject/${gradeSubjectId}`, {
-            method: 'DELETE',
-        });
+    async updateSubject(id, name) {
+        return request(`/subjects/${id}`, { method: 'PUT', body: JSON.stringify({ name }) });
+    },
+    async updateGradeSubject(id, name) {
+        return request(`/grade-subjects/${id}`, { method: 'PUT', body: JSON.stringify({ name }) });
+    },
+    async removeSubjectFromGrade(id) {
+        return request(`/grade-subjects/${id}`, { method: 'DELETE' });
+    },
+    async getSubjectLessons(gradeSubjectId) {
+        return request(`/subject-lessons?gradeSubjectId=${gradeSubjectId}`);
+    },
+    async createSubjectLesson(gradeSubjectId, lessonTitle) {
+        return request('/subject-lessons', { method: 'POST', body: JSON.stringify({ gradeSubjectId, lessonTitle }) });
+    },
+    async updateSubjectLesson(id, lessonTitle) {
+        return request(`/subject-lessons/${id}`, { method: 'PUT', body: JSON.stringify({ lessonTitle }) });
+    },
+    async deleteSubjectLesson(id) {
+        return request(`/subject-lessons/${id}`, { method: 'DELETE' });
     },
     async getSyllabusWeeks(gradeSubjectId, region) {
         const qRegion = region ? `&region=${region}` : '';
